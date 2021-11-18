@@ -39,6 +39,7 @@ type pbfield struct {
 	Number   int
 	Type     descriptorpb.FieldDescriptorProto_Type
 	TypeName string
+	FieldName string
 }
 
 func (f pbfield) Name() string {
@@ -63,6 +64,12 @@ func Type(typ descriptorpb.FieldDescriptorProto_Type) FieldOption {
 func TypeName(n string) FieldOption {
 	return func(p *pbfield) {
 		p.TypeName = n
+	}
+}
+
+func FieldName(n string)FieldOption{
+	return func(p *pbfield){
+		p.FieldName = n
 	}
 }
 

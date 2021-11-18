@@ -16,7 +16,6 @@ package entproto
 
 import (
 	"errors"
-	"log"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -81,7 +80,6 @@ func Generate(g *gen.Graph) error {
 
 	// Print the .proto files.
 	var printer protoprint.Printer
-	log.Println("entProtoDir ",entProtoDir)
 	if err = printer.PrintProtosToFileSystem(allDescriptors, entProtoDir); err != nil {
 		return fmt.Errorf("entproto: failed writing .proto files: %w", err)
 	}

@@ -399,15 +399,20 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 		t = edgeAnnotation.Type
 	}
 
-
-
+	// < edge name
+	var edgeName = e.Name
+	if len(edgeAnnotation.FieldName) > 0{
+		edgeName = edgeAnnotation.FieldName
+	}
+	// >
 
 	fieldNum := int32(edgeAnnotation.Number)
 	fieldDesc := &descriptorpb.FieldDescriptorProto{
 		Number: &fieldNum,
-		Name:   &e.Name,
+		Name:   &edgeName,
 		Type:   &t,
 	}
+
 
 
 
@@ -487,12 +492,20 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 	}
 	// >
 
-	// < field comment
-	_ = extractFieldCommnt(f)
-	if fieldDesc.Options == nil{
-		fieldDesc.Options = &descriptorpb.FieldOptions{}
+	// < fieldName
+	if len(fann.FieldName) > 0{
+		fieldDesc.Name = &fann.FieldName
 	}
-	proto.SetExtension(fieldDesc.Options,options.E_Openapiv2Field,&options.JSONSchema{})
+	// > 
+
+	// < field comment
+	comment := extractFieldCommnt(f)
+	if len(comment) > 0{
+		if fieldDesc.Options == nil{
+			fieldDesc.Options = &descriptorpb.FieldOptions{}
+		}
+		proto.SetExtension(fieldDesc.Options,options.E_Openapiv2Field,&options.JSONSchema{Description:comment})
+	}
 	// >
 
 	fieldNumber := int32(fann.Number)
@@ -521,7 +534,6 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 }
 
 func extractProtoTypeDetails(f *gen.Field) (fieldType, error) {
-	log.Println(f.Name, " , fieldType ",f.Type.Type)
 	cfg, ok := typeMap[f.Type.Type]
 	if !ok || cfg.unsupported {
 		log.Println("unsupprted here")

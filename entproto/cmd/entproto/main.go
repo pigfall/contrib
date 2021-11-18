@@ -40,11 +40,9 @@ func main() {
 		panic(err)
 	}
 	cfg :=&gen.Config{}
-	log.Println("targetPath ", targetPath)
 	if len(*targetPath) > 0{
 		cfg.Target = path.Join(workingDir,*targetPath)
 	}
-	log.Println("tzzTarget ",cfg.Target)
 	graph, err := entc.LoadGraph(*schemaPath, cfg)
 	if err != nil {
 		log.Fatalf("entproto: failed loading ent graph: %v", err)
