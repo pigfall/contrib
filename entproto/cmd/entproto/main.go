@@ -16,6 +16,8 @@ package main
 
 import (
 	"flag"
+	"path"
+	"os"
 	"log"
 
 	"entgo.io/contrib/entproto"
@@ -24,14 +26,26 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Llongfile | log.LstdFlags)
 	var (
 		schemaPath = flag.String("path", "", "path to schema directory")
+		targetPath = flag.String("targetPath", "", "target path")
 	)
 	flag.Parse()
 	if *schemaPath == "" {
 		log.Fatal("entproto: must specify schema path. use entproto -path ./ent/schema")
 	}
-	graph, err := entc.LoadGraph(*schemaPath, &gen.Config{})
+	workingDir,err := os.Getwd()
+	if err != nil{
+		panic(err)
+	}
+	cfg :=&gen.Config{}
+	log.Println("targetPath ", targetPath)
+	if len(*targetPath) > 0{
+		cfg.Target = path.Join(workingDir,*targetPath)
+	}
+	log.Println("tzzTarget ",cfg.Target)
+	graph, err := entc.LoadGraph(*schemaPath, cfg)
 	if err != nil {
 		log.Fatalf("entproto: failed loading ent graph: %v", err)
 	}

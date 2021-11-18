@@ -16,6 +16,7 @@ package entproto
 
 import (
 	"errors"
+	"log"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -24,8 +25,10 @@ import (
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	"github.com/jhump/protoreflect/desc/builder"
 	"google.golang.org/protobuf/types/descriptorpb"
+	"google.golang.org/protobuf/proto"
 	_ "google.golang.org/protobuf/types/known/emptypb"
 	_ "google.golang.org/protobuf/types/known/timestamppb"
 	_ "google.golang.org/protobuf/types/known/wrapperspb" // needed to load wkt to global proto registry
@@ -314,7 +317,8 @@ func (a *Adapter) toProtoMessageDescriptor(genType *gen.Type) (*descriptorpb.Des
 	}
 
 	if !genType.ID.UserDefined {
-		genType.ID.Annotations = map[string]interface{}{FieldAnnotation: Field(IDFieldNumber)}
+		// TODO
+		// genType.ID.Annotations = map[string]interface{}{FieldAnnotation: Field(IDFieldNumber)}
 	}
 
 	all := []*gen.Field{genType.ID}
@@ -323,8 +327,15 @@ func (a *Adapter) toProtoMessageDescriptor(genType *gen.Type) (*descriptorpb.Des
 	for _, f := range all {
 		protoField, err := toProtoFieldDescriptor(f)
 		if err != nil {
+			log.Println(err)
 			return nil, err
 		}
+		// <
+		if protoField == nil{
+			// ignore this field
+			continue
+		}
+		// >
 		// If the field is an enum type, we need to create the enum descriptor as well.
 		if f.Type.Type == field.TypeEnum {
 			dp, err := toProtoEnumDescriptor(f)
@@ -374,10 +385,22 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 	if err != nil {
 		return nil, fmt.Errorf("entproto: failed extracting proto field number annotation: %w", err)
 	}
+	// < ignore 
+	if edgeAnnotation == nil{
+		return nil,nil
+	}
+	// >
 
 	if edgeAnnotation.Number == 1 {
 		return nil, fmt.Errorf("entproto: edge %q has number 1 which is reserved for id", e.Name)
 	}
+
+	if edgeAnnotation.Type != descriptorpb.FieldDescriptorProto_Type(0){
+		t = edgeAnnotation.Type
+	}
+
+
+
 
 	fieldNum := int32(edgeAnnotation.Number)
 	fieldDesc := &descriptorpb.FieldDescriptorProto{
@@ -385,6 +408,8 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 		Name:   &e.Name,
 		Type:   &t,
 	}
+
+
 
 	if !e.Unique {
 		fieldDesc.Label = &repeatedFieldLabel
@@ -452,8 +477,24 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 	}
 	fann, err := extractFieldAnnotation(f)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
+
+	// < ignore this field
+	if fann == nil{
+		return nil,nil
+	}
+	// >
+
+	// < field comment
+	_ = extractFieldCommnt(f)
+	if fieldDesc.Options == nil{
+		fieldDesc.Options = &descriptorpb.FieldOptions{}
+	}
+	proto.SetExtension(fieldDesc.Options,options.E_Openapiv2Field,&options.JSONSchema{})
+	// >
+
 	fieldNumber := int32(fann.Number)
 	if fieldNumber == 1 && strings.ToUpper(f.Name) != "ID" {
 		return nil, fmt.Errorf("entproto: field %q has number 1 which is reserved for id", f.Name)
@@ -468,6 +509,7 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 	}
 	typeDetails, err := extractProtoTypeDetails(f)
 	if err != nil {
+		log.Println(err, " +  ",f.Type.Type)
 		return nil, err
 	}
 	fieldDesc.Type = &typeDetails.protoType
@@ -479,8 +521,10 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 }
 
 func extractProtoTypeDetails(f *gen.Field) (fieldType, error) {
+	log.Println(f.Name, " , fieldType ",f.Type.Type)
 	cfg, ok := typeMap[f.Type.Type]
 	if !ok || cfg.unsupported {
+		log.Println("unsupprted here")
 		return fieldType{}, unsupportedTypeError{Type: f.Type}
 	}
 	if f.Optional {

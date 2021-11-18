@@ -16,10 +16,11 @@ package entproto
 
 import (
 	"errors"
+	"log"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
+	// "path"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +56,9 @@ func Hook() gen.Hook {
 // file containing a //go:generate directive to invoke protoc and compile Go code from the protobuf definitions.
 // If generate.go already exists next to the .proto file, this step is skipped.
 func Generate(g *gen.Graph) error {
-	entProtoDir := path.Join(g.Config.Target, "proto")
+	var entProtoDir string
+	// entProtoDir = path.Join(g.Config.Target, "proto")
+	 entProtoDir = g.Config.Target
 	adapter, err := LoadAdapter(g)
 	if err != nil {
 		return fmt.Errorf("entproto: failed parsing ent graph: %w", err)
@@ -65,7 +68,7 @@ func Generate(g *gen.Graph) error {
 		name := schema.Name
 		_, err := adapter.GetFileDescriptor(name)
 		if err != nil && !errors.Is(err, ErrSchemaSkipped) {
-			errs = multierr.Append(errs, err)
+			errs = multierr.Append(errs, fmt.Errorf("[%s] %w",name,err))
 		}
 	}
 	if errs != nil {
@@ -78,19 +81,23 @@ func Generate(g *gen.Graph) error {
 
 	// Print the .proto files.
 	var printer protoprint.Printer
+	log.Println("entProtoDir ",entProtoDir)
 	if err = printer.PrintProtosToFileSystem(allDescriptors, entProtoDir); err != nil {
 		return fmt.Errorf("entproto: failed writing .proto files: %w", err)
 	}
 
 	// Print a generate.go file with protoc command for go file generation
-	for _, fd := range allDescriptors {
-		protoFilePath := filepath.Join(entProtoDir, fd.GetName())
-		dir := filepath.Dir(protoFilePath)
-		genGoPath := filepath.Join(dir, "generate.go")
-		if !fileExists(genGoPath) {
-			contents := protocGenerateGo(fd)
-			if err := ioutil.WriteFile(genGoPath, []byte(contents), 0600); err != nil {
-				return fmt.Errorf("entproto: failed generating generate.go file for %q: %w", protoFilePath, err)
+	_,genGRPC := os.LookupEnv("genGRPC")
+	if genGRPC{
+		for _, fd := range allDescriptors {
+			protoFilePath := filepath.Join(entProtoDir, fd.GetName())
+			dir := filepath.Dir(protoFilePath)
+			genGoPath := filepath.Join(dir, "generate.go")
+			if !fileExists(genGoPath) {
+				contents := protocGenerateGo(fd)
+				if err := ioutil.WriteFile(genGoPath, []byte(contents), 0600); err != nil {
+					return fmt.Errorf("entproto: failed generating generate.go file for %q: %w", protoFilePath, err)
+				}
 			}
 		}
 	}

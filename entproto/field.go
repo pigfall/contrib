@@ -67,6 +67,10 @@ func TypeName(n string) FieldOption {
 }
 
 func extractFieldAnnotation(fld *gen.Field) (*pbfield, error) {
+	_,ignore := fld.Annotations[FieldIgnoreAnnotation]
+	if ignore{
+		return nil,nil
+	}
 	annot, ok := fld.Annotations[FieldAnnotation]
 	if !ok {
 		return nil, fmt.Errorf("entproto: field %q does not have an entproto.Field annnoation", fld.Name)
@@ -83,6 +87,10 @@ func extractFieldAnnotation(fld *gen.Field) (*pbfield, error) {
 }
 
 func extractEdgeAnnotation(edge *gen.Edge) (*pbfield, error) {
+	_,ignore := edge.Annotations[FieldIgnoreAnnotation]
+	if ignore{
+		return nil,nil
+	}
 	annot, ok := edge.Annotations[FieldAnnotation]
 	if !ok {
 		return nil, fmt.Errorf("entproto: edge %q does not have an entproto.Field annotation", edge.Name)
@@ -96,4 +104,8 @@ func extractEdgeAnnotation(edge *gen.Edge) (*pbfield, error) {
 	}
 
 	return &out, nil
+}
+
+func extractFieldCommnt(fld *gen.Field)(string){
+	return fld.Comment()
 }
