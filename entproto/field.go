@@ -42,6 +42,10 @@ type pbfield struct {
 	FieldName string
 }
 
+func PBFieldNumber(annotation schema.Annotation)int{
+	return annotation.(pbfield).Number
+}
+
 func (f pbfield) Name() string {
 	return FieldAnnotation
 }
