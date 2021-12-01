@@ -21,7 +21,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
 	"github.com/jhump/protoreflect/desc"
@@ -121,43 +120,75 @@ func (a *Adapter) parse() error {
 			continue
 		}
 
-		if _, ok := protoPackages[protoPkg]; !ok {
-			goPkg := a.goPackageName(protoPkg)
-			protoPackages[protoPkg] = &descriptorpb.FileDescriptorProto{
-				Name:    relFileName(protoPkg),
-				Package: &protoPkg,
-				Syntax:  strptr("proto3"),
-				Options: &descriptorpb.FileOptions{
-					GoPackage: &goPkg,
-				},
+		// < gen page query
+		msgDescPageQuery,err := a.toProtoMessageDescriptorPageQuery(genType,messageDescriptor)
+		if err != nil{
+			a.errors[genType.Name] = fmt.Errorf("%w %v",a.errors[genType.Name],err)
+			continue
+		}
+		// >
+
+		// < gen count req
+		msgDescCountReq,err := a.toProtoMessageDescriptorCountReq(genType)
+		if err != nil{
+			a.errors[genType.Name] = fmt.Errorf("%w %v",a.errors[genType.Name],err)
+			continue
+		}
+		// >
+
+		addPBMessageDescriptor := func (msgDesc *descriptorpb.DescriptorProto)(err error){
+			if _, ok := protoPackages[protoPkg]; !ok {
+				goPkg := a.goPackageName(protoPkg)
+				protoPackages[protoPkg] = &descriptorpb.FileDescriptorProto{
+					Name:    relFileName(protoPkg),
+					Package: &protoPkg,
+					Syntax:  strptr("proto3"),
+					Options: &descriptorpb.FileOptions{
+						GoPackage: &goPkg,
+					},
+				}
 			}
-		}
-		fd := protoPackages[protoPkg]
-		fd.MessageType = append(fd.MessageType, messageDescriptor)
-		a.schemaProtoFiles[genType.Name] = *fd.Name
+			fd := protoPackages[protoPkg]
+			fd.MessageType = append(fd.MessageType,msgDesc)
+			a.schemaProtoFiles[genType.Name] = *fd.Name
 
-		depPaths, err := a.extractDepPaths(messageDescriptor)
-		if err != nil {
-			a.errors[genType.Name] = err
-			continue
-		}
-		fd.Dependency = append(fd.Dependency, depPaths...)
+			depPaths, err := a.extractDepPaths(msgDesc)
+			if err != nil {
+				a.errors[genType.Name] = err
+				return nil
+			}
+			fd.Dependency = append(fd.Dependency, depPaths...)
 
-		svcAnnotation, err := extractServiceAnnotation(genType)
-		if errors.Is(err, errNoServiceDef) {
-			continue
-		}
-		if err != nil {
-			return err
-		}
-		if svcAnnotation.Generate {
-			svcResources, err := a.createServiceResources(genType)
+			svcAnnotation, err := extractServiceAnnotation(genType)
+			if errors.Is(err, errNoServiceDef) {
+				return nil
+			}
 			if err != nil {
 				return err
 			}
-			fd.Service = append(fd.Service, svcResources.svc)
-			fd.MessageType = append(fd.MessageType, svcResources.svcMessages...)
-			fd.Dependency = append(fd.Dependency, "google/protobuf/empty.proto")
+			if svcAnnotation.Generate {
+				svcResources, err := a.createServiceResources(genType)
+				if err != nil {
+					return err
+				}
+				fd.Service = append(fd.Service, svcResources.svc)
+				fd.MessageType = append(fd.MessageType, svcResources.svcMessages...)
+				fd.Dependency = append(fd.Dependency, "google/protobuf/empty.proto")
+			}
+			return nil
+		}
+
+		err = addPBMessageDescriptor(messageDescriptor)
+		if err != nil{
+			return err
+		}
+		err = addPBMessageDescriptor(msgDescPageQuery)
+		if err != nil{
+			return err
+		}
+		err = addPBMessageDescriptor(msgDescCountReq)
+		if err != nil{
+			return err
 		}
 	}
 
@@ -363,6 +394,52 @@ func (a *Adapter) toProtoMessageDescriptor(genType *gen.Type) (*descriptorpb.Des
 
 	return msg, nil
 }
+
+func (a *Adapter) toProtoMessageDescriptorCountReq(genType *gen.Type) (*descriptorpb.DescriptorProto, error) {
+	msg,err := a.toProtoMessageDescriptor(genType)
+	if err != nil{
+		return nil,err
+	}
+	var msgName = fmt.Sprintf("%sCountReq",msg.GetName())
+	msg.Name = &msgName
+	return msg,nil
+}
+
+func (a *Adapter) toProtoMessageDescriptorPageQuery(genType *gen.Type,msg *descriptorpb.DescriptorProto) (*descriptorpb.DescriptorProto, error) {
+	rawMsg,err := a.toProtoMessageDescriptor(genType)
+	if err != nil{
+		return nil,err
+	}
+
+	msgName := fmt.Sprintf("%sPageQuery",*rawMsg.Name)
+	rawMsg.Name = &msgName
+
+	var maxFieldNumber int32 = 1
+	for _,field := range rawMsg.Field{
+		if (*field.Number) > maxFieldNumber {
+			maxFieldNumber = (*field.Number)
+		}
+	}
+
+
+	var pageIndex = "pageIndex"
+	var pageSize = "pageSize"
+
+	for i,fldName := range []string{pageIndex,pageSize}{
+		fldNum := maxFieldNumber  + int32(1 + i)
+		addFld := func(fldNum int32,fldName string){
+			rawMsg.Field = append(rawMsg.Field,&descriptorpb.FieldDescriptorProto{
+				Name:&fldName,
+				Number:&(fldNum),
+				Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+			})
+		}
+		addFld(fldNum,fldName)
+	}
+
+	return rawMsg,nil
+}
+
 
 func verifyNoDuplicateFieldNumbers(msg *descriptorpb.DescriptorProto) error {
 	mem := make(map[int32]struct{})
