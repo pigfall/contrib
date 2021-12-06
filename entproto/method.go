@@ -22,14 +22,23 @@ type Method struct {
 	Name string
 	InputType MethodInOutType
 	OutputType MethodInOutType
+	HttpMapping *HttpMapping
+	Summary string
 }
 
-func NewMethod(name string,inputType MethodInOutType,outputType MethodInOutType)*Method{
-	return &Method {
+type MethodOption func(*Method)
+
+
+func NewMethod(name string,inputType MethodInOutType,outputType MethodInOutType,options ...MethodOption)*Method{
+	m := &Method {
 		InputType:inputType,
 		OutputType:outputType,
 		Name:name,
 	}
+	for _,option := range options{
+		option(m)
+	}
+	return m
 }
 
 func (this Method) inOutTypeToPBMsg(protoPkgName string,msgContainer *MsgContainer,methodInOutType MethodInOutType,repeatedMsg *descriptorpb.DescriptorProto)(*descriptorpb.DescriptorProto,string,error){
@@ -65,12 +74,21 @@ func (this Method)genMethodProtos(protoPkgName string,msgContainer *MsgContainer
 		log.Println(err)
 		return methodResources{},err
 	}
+	methodDesc := &descriptorpb.MethodDescriptorProto{
+		Name:       strptr(this.Name),
+		InputType:  strptr(inputTypeName),
+		OutputType: strptr(outputTypeName),
+	}
+
+	if this.HttpMapping != nil{
+		err = this.HttpMapping.Visit(&this,methodDesc,msgContainer)
+		if err != nil{
+			log.Println(err)
+			return methodResources{},err
+		}
+	}
 	return methodResources{
-		methodDescriptor :&descriptorpb.MethodDescriptorProto{
-			Name:       strptr(this.Name),
-			InputType:  strptr(inputTypeName),
-			OutputType: strptr(outputTypeName),
-		},
+		methodDescriptor :methodDesc,
 		input            :inputType,
 	},nil
 }

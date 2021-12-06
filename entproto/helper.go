@@ -18,3 +18,7 @@ type  protoPackages struct{
 }
 
 
+
+func (this *MsgContainer) GetGenTypeIdStorageKey()string{
+	return this.genType.ID.StorageKey()
+}
