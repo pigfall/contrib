@@ -13,8 +13,9 @@ const(
 	MethodInOutType_GenType 
 	MethodInOutType_GenTypeId
 	MethodInOutType_Empty 
-	MethodInOutType_PageFind
+	MethodInOutType_PageQuery
 	MethodInOutType_GenTypes
+	MethodInOutType_Count
 )
 
 type Method struct {
@@ -24,7 +25,7 @@ type Method struct {
 }
 
 func NewMethod(name string,inputType MethodInOutType,outputType MethodInOutType)*Method{
-	return &Method{
+	return &Method {
 		InputType:inputType,
 		OutputType:outputType,
 		Name:name,
@@ -41,6 +42,10 @@ func (this Method) inOutTypeToPBMsg(protoPkgName string,msgContainer *MsgContain
 		return nil,"google.protobuf.Empty",nil
 	case MethodInOutType_GenTypes:
 		return repeatedMsg,repeatedMsg.GetName(),nil
+	case MethodInOutType_PageQuery:
+		return msgContainer.pageQueryPBMsg,msgContainer.pageQueryPBMsg.GetName(),nil
+		case MethodInOutType_Count:
+		return msgContainer.countPBMsg,msgContainer.countPBMsg.GetName(),nil
 	default:
 		err :=  fmt.Errorf("Undefined MethodInputType %v",this.InputType)
 		log.Println(err)

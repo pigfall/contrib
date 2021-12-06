@@ -45,7 +45,9 @@ func extractServiceV2Annotation(sch *gen.Type) (*servicev2, error) {
 }
 
 
-func (this servicev2)  createServiceResources(adaptor *Adapter,pkgName string,genType *gen.Type,genTypeMsg *descriptorpb.DescriptorProto,genTypeMsgId *descriptorpb.DescriptorProto)(serviceResources, error){
+func (this servicev2)  createServiceResources(adaptor *Adapter,pkgName string,msgContainer *MsgContainer)(serviceResources, error){
+	genType := msgContainer.genType 
+	genTypeMsg := msgContainer.genTypePBMsg
 	name := genType.Name
 	serviceFqn := fmt.Sprintf("%sService", name)
 
@@ -80,11 +82,7 @@ func (this servicev2)  createServiceResources(adaptor *Adapter,pkgName string,ge
 	// >
 
 	for _, m := range this.Methods {
-		resources, err := m.genMethodProtos(pkgName,&MsgContainer{
-			genType :genType,
-			genTypePBMsg :genTypeMsg,
-			genTypePBMsgId :genTypeMsgId,
-		},genTypeMsgsList)
+		resources, err := m.genMethodProtos(pkgName,msgContainer,genTypeMsgsList)
 		if err != nil {
 			return serviceResources{}, err
 		}

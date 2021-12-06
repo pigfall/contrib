@@ -9,6 +9,8 @@ type MsgContainer struct{
 	genType *gen.Type
 	genTypePBMsg *descriptorpb.DescriptorProto
 	genTypePBMsgId *descriptorpb.DescriptorProto
+	pageQueryPBMsg *descriptorpb.DescriptorProto
+	countPBMsg *descriptorpb.DescriptorProto
 }
 
 type  protoPackages struct{

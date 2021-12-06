@@ -243,12 +243,52 @@ func (a *Adapter) parse() error {
 			log.Println(err)
 			return err
 		}
+		countPBMsg:= &descriptorpb.DescriptorProto{
+			Name:strptr("Count"),
+			Field:[]*descriptorpb.FieldDescriptorProto{
+				{
+					Name:strptr("value"),
+					Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+				},
+			},
+		}
+		err = a.AddMessageDescriptorNoExtractDep(protoPkg,countPBMsg)
+		if err != nil{
+			log.Println(err)
+			return err
+		}
+		msgContainer.countPBMsg = countPBMsg
+
+		// < generate pageFind entity
+		genTypePBMsgCopy,err := a.toProtoMessageDescriptor(msgContainer.genType)
+		if err != nil{
+			log.Println(err)
+			return err
+		}
+		// change name
+		genTypePBMsgCopy.Name = strptr(fmt.Sprintf("%sPageQuery",genTypePBMsgCopy.GetName()))
+		// add page query field
+		genTypePBMsgCopy.Field = append(
+			genTypePBMsgCopy.Field,
+			[]*descriptorpb.FieldDescriptorProto{
+				{
+					Name:strptr("page_index"),
+					Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+				},
+				{
+					Name:strptr("page_size"),
+					Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+				},
+			}...,
+		)
+		var pageQueryPBMsg = genTypePBMsgCopy
+		msgContainer.pageQueryPBMsg = pageQueryPBMsg
+		// >
+
 		svcResources, err := svcV2.createServiceResources(
 			a,
 			protoPkg,
-			msgContainer.genType,
-			msgContainer.genTypePBMsg,
-			msgContainer.genTypePBMsgId,
+			msgContainer,
 		)
 		if err != nil {
 			log.Println(err)
