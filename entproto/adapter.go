@@ -244,7 +244,7 @@ func (a *Adapter) parse() error {
 			return err
 		}
 		countPBMsg:= &descriptorpb.DescriptorProto{
-			Name:strptr("Count"),
+			Name:strptr("CountNumber"),
 			Field:[]*descriptorpb.FieldDescriptorProto{
 				{
 					Name:strptr("value"),
