@@ -1,30 +1,31 @@
 package entproto
 
-import(
-	"log"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"github.com/mitchellh/mapstructure"
+import (
 	"fmt"
-	"entgo.io/ent/schema"
+	"log"
+
 	"entgo.io/ent/entc/gen"
+	"entgo.io/ent/schema"
+	"github.com/mitchellh/mapstructure"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-const(
-		ServiceV2Annotation = "ProtoServiceV2"
+const (
+	ServiceV2Annotation = "ProtoServiceV2"
 )
 
-type servicev2 struct{
+type servicev2 struct {
 	Methods []*Method
 }
 
-func ServiceV2(methods  ... *Method)schema.Annotation{
+func ServiceV2(methods ...*Method) schema.Annotation {
 	return &servicev2{
-		Methods:methods,
+		Methods: methods,
 	}
 }
 
-func (servicev2) Name() string{
-	return ServiceV2Annotation 
+func (servicev2) Name() string {
+	return ServiceV2Annotation
 }
 
 func extractServiceV2Annotation(sch *gen.Type) (*servicev2, error) {
@@ -44,9 +45,8 @@ func extractServiceV2Annotation(sch *gen.Type) (*servicev2, error) {
 	return &out, nil
 }
 
-
-func (this servicev2)  createServiceResources(adaptor *Adapter,pkgName string,msgContainer *MsgContainer)(serviceResources, error){
-	genType := msgContainer.genType 
+func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, msgContainer *MsgContainer) (serviceResources, error) {
+	genType := msgContainer.genType
 	genTypeMsg := msgContainer.genTypePBMsg
 	name := genType.Name
 	serviceFqn := fmt.Sprintf("%sService", name)
@@ -58,16 +58,16 @@ func (this servicev2)  createServiceResources(adaptor *Adapter,pkgName string,ms
 	}
 
 	// < add repeated type
-	genTypeMsgsList :=&descriptorpb.DescriptorProto{
-		Name:strptr(fmt.Sprintf("%ss",genType.Name)),
+	genTypeMsgsList := &descriptorpb.DescriptorProto{
+		Name:     strptr(fmt.Sprintf("%ss", genType.Name)),
 		EnumType: []*descriptorpb.EnumDescriptorProto(nil),
-		Field:[]*descriptorpb.FieldDescriptorProto{
+		Field: []*descriptorpb.FieldDescriptorProto{
 			{
-				Name:strptr("data_list"),
-				Number: int32ptr(1),
-				TypeName:strptr(genTypeMsg.GetName()),
-				Label: descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
-				Type:descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
+				Name:     strptr("data_list"),
+				Number:   int32ptr(1),
+				TypeName: strptr(genTypeMsg.GetName()),
+				Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
 			},
 		},
 	}
@@ -75,20 +75,111 @@ func (this servicev2)  createServiceResources(adaptor *Adapter,pkgName string,ms
 		pkgName,
 		genTypeMsgsList,
 	)
-	if err != nil{
+	if err != nil {
 		log.Println(err)
-		return out,err
+		return out, err
 	}
 	// >
 
 	for _, m := range this.Methods {
-		resources, err := m.genMethodProtos(pkgName,msgContainer,genTypeMsgsList)
+		resources, err := m.genMethodProtos(pkgName, msgContainer, genTypeMsgsList)
 		if err != nil {
 			return serviceResources{}, err
 		}
 		out.svc.Method = append(out.svc.Method, resources.methodDescriptor)
 		out.svcMessages = append(out.svcMessages, resources.input)
 	}
+
+	// < generate releated edge rpc method
+	node := msgContainer.genType
+	for _, edge := range node.Edges {
+		twoTypeIdStructName := fmt.Sprintf("%sIdAnd%sId", genType.Name, edge.Type.Name)
+		twoTypeStruct := &descriptorpb.DescriptorProto{
+			Name: strptr(twoTypeIdStructName),
+			Field: []*descriptorpb.FieldDescriptorProto{
+				{
+					Name: strptr(BuildSchemaIdStructName(genType)),
+					Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				},
+				{
+					Name: strptr(BuildSchemaIdStructName(edge.Type)),
+					Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				},
+			},
+		}
+		adaptor.AddMessageDescriptorNoExtractDep(pkgName, twoTypeStruct)
+		if (edge.Rel.Type == gen.O2O) || (edge.Rel.Type == gen.O2M) {
+			out.svc.Method = append(
+				out.svc.Method,
+				&descriptorpb.MethodDescriptorProto{
+					Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
+					InputType:  strptr(edge.Type.Name),
+					OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
+				},
+			)
+
+			out.svc.Method = append(
+				out.svc.Method,
+				&descriptorpb.MethodDescriptorProto{
+					Name:       strptr(fmt.Sprintf("Add%sById", edge.Type.Name)),
+					InputType:  strptr(twoTypeIdStructName),
+					OutputType: strptr("google.protobuf.Empty"),
+				},
+			)
+
+			out.svc.Method = append(
+				out.svc.Method,
+				&descriptorpb.MethodDescriptorProto{
+					Name:       strptr(fmt.Sprintf("Remove%s", edge.Type.Name)),
+					InputType:  strptr(twoTypeIdStructName),
+					OutputType: strptr("google.protobuf.Empty"),
+				},
+			)
+
+		} else if edge.Rel.Type == gen.M2M {
+			edgeNode := FindSchemaByNameX(adaptor.graph.Nodes, edge.Type.Name)
+			edgePBDesc, err := adaptor.toProtoMessageDescriptor(edgeNode)
+			if err != nil {
+				log.Println((err))
+				return out, err
+			}
+			reqName := fmt.Sprintf("Add%sReq", edge.Type.Name)
+			edgePBDesc.Name = strptr(reqName)
+			edgePBDesc.Field = append(edgePBDesc.Field, &descriptorpb.FieldDescriptorProto{
+				Name: strptr(genType.ID.StorageKey()),
+			})
+			// TODO
+			adaptor.AddMessageDescriptorNoExtractDep(pkgName, edgePBDesc)
+
+			out.svc.Method = append(
+				out.svc.Method,
+				&descriptorpb.MethodDescriptorProto{
+					Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
+					InputType:  strptr(reqName),
+					OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
+				},
+			)
+
+			out.svc.Method = append(
+				out.svc.Method,
+				&descriptorpb.MethodDescriptorProto{
+					Name:       strptr(fmt.Sprintf("Add%sById", edge.Type.Name)),
+					InputType:  strptr(twoTypeIdStructName),
+					OutputType: strptr("google.protobuf.Empty"),
+				},
+			)
+
+			out.svc.Method = append(
+				out.svc.Method,
+				&descriptorpb.MethodDescriptorProto{
+					Name:       strptr(fmt.Sprintf("Remove%s", edge.Type.Name)),
+					InputType:  strptr(twoTypeIdStructName),
+					OutputType: strptr("google.protobuf.Empty"),
+				},
+			)
+		}
+	}
+	// >
 
 	return out, nil
 

@@ -24,6 +24,7 @@ import (
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
 	"github.com/jhump/protoreflect/desc"
+	"os"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
 	"github.com/jhump/protoreflect/desc/builder"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -108,6 +109,14 @@ func (a *Adapter ) addMessageDescriptor(packageName string,messageDescriptor *de
 
 		if _, ok := a.protoPackages[protoPkg]; !ok {
 			goPkg := a.goPackageName(protoPkg)
+
+			// < custome go option package
+			optionGoPackage, exist := os.LookupEnv("OPTION_GO_PACKAGE")
+			if exist{
+				goPkg = optionGoPackage
+			}
+			// >
+
 			a.protoPackages[protoPkg] = &descriptorpb.FileDescriptorProto{
 				Name:    relFileName(protoPkg),
 				Package: &protoPkg,
