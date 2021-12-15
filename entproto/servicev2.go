@@ -120,89 +120,45 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				continue
 			}
 			// log.Printf("node %s edge %s owner %s\n", genType.Name, edge.Name, edge.Owner.Name)
-			methodEdgeAdd := &descriptorpb.MethodDescriptorProto{
-				Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
-				InputType:  strptr(edge.Type.Name),
-				OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
-				Options:    &descriptorpb.MethodOptions{},
-			}
-			url, err := edgeAddUrlTpl(genType, edge)
+			mAdd, err := edgeMethodAdd(
+				genType,
+				edge,
+				&descriptorpb.MethodDescriptorProto{
+					Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
+					InputType:  strptr(edge.Type.Name),
+					OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
+					Options:    &descriptorpb.MethodOptions{},
+				},
+			)
 			if err != nil {
 				log.Println(err)
 				return out, err
 			}
-			httpRule := &pbHttpOpt.HttpRule{
-				Pattern: &pbHttpOpt.HttpRule_Post{
-					Post: url,
-				},
-			}
 			out.svc.Method = append(
 				out.svc.Method,
-				methodEdgeAdd,
+				mAdd,
 			)
 
-			proto.SetExtension(methodEdgeAdd.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s", genType.Name, edge.Type.Name)})
-			proto.SetExtension(
-				methodEdgeAdd.Options,
-				pbHttpOpt.E_Http,
-				httpRule,
-			)
-
-			url, err = nodeIdAndEdgeIdUrlTpl(genType, edge)
+			mAddById, err := edgeMethodAddById(genType, edge, twoTypeIdStructName)
 			if err != nil {
 				log.Println(err)
 				return out, err
 			}
+			out.svc.Method = append(
+				out.svc.Method,
+				mAddById,
+			)
 
-			httpRule = &pbHttpOpt.HttpRule{
-				Pattern: &pbHttpOpt.HttpRule_Post{
-					Post: url,
-				},
-			}
-			log.Println(url)
-
-			methodEdgeAddById := &descriptorpb.MethodDescriptorProto{
-				Name:       strptr(fmt.Sprintf("Add%sById", edge.Type.Name)),
-				InputType:  strptr(twoTypeIdStructName),
-				OutputType: strptr("google.protobuf.Empty"),
-				Options:    &descriptorpb.MethodOptions{},
+			mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
+			if err != nil {
+				log.Println(err)
+				return out, err
 			}
 			out.svc.Method = append(
 				out.svc.Method,
-				methodEdgeAddById,
+				mRemove,
 			)
 
-			proto.SetExtension(methodEdgeAddById.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s by id", genType.Name, edge.Type.Name)})
-			proto.SetExtension(
-				methodEdgeAddById.Options,
-				pbHttpOpt.E_Http,
-				httpRule,
-			)
-
-			methodEdgeRemove := &descriptorpb.MethodDescriptorProto{
-				Name:       strptr(fmt.Sprintf("Remove%s", edge.Type.Name)),
-				InputType:  strptr(twoTypeIdStructName),
-				OutputType: strptr("google.protobuf.Empty"),
-				Options:    &descriptorpb.MethodOptions{},
-			}
-
-			httpRule = &pbHttpOpt.HttpRule{
-				Pattern: &pbHttpOpt.HttpRule_Delete{
-					Delete: url,
-				},
-			}
-
-			out.svc.Method = append(
-				out.svc.Method,
-				methodEdgeRemove,
-			)
-
-			proto.SetExtension(methodEdgeRemove.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Remove %s from %s by id", edge.Type.Name, genType.Name)})
-			proto.SetExtension(
-				methodEdgeRemove.Options,
-				pbHttpOpt.E_Http,
-				httpRule,
-			)
 		} else if edge.Rel.Type == gen.M2M {
 			edgeNode := FindSchemaByNameX(adaptor.graph.Nodes, edge.Type.Name)
 			edgePBDesc, err := adaptor.toProtoMessageDescriptor(edgeNode)
@@ -219,32 +175,62 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 			// TODO
 			adaptor.AddMessageDescriptorNoExtractDep(pkgName, edgePBDesc)
 
-			out.svc.Method = append(
-				out.svc.Method,
+			mAdd, err := edgeMethodAdd(
+				genType,
+				edge,
 				&descriptorpb.MethodDescriptorProto{
 					Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
 					InputType:  strptr(reqName),
 					OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
+					Options:    &descriptorpb.MethodOptions{},
 				},
 			)
+			if err != nil {
+				log.Println(err)
+				return out, err
+			}
+			out.svc.Method = append(
+				out.svc.Method,
+				mAdd,
+			)
+
+			mAddById, err := edgeMethodAddById(genType, edge, twoTypeIdStructName)
+			if err != nil {
+				log.Println(err)
+				return out, err
+			}
+			out.svc.Method = append(
+				out.svc.Method,
+				mAddById,
+			)
+
+			//out.svc.Method = append(
+			//	out.svc.Method,
+			//	&descriptorpb.MethodDescriptorProto{
+			//		Name:       strptr(fmt.Sprintf("Add%sById", edge.Type.Name)),
+			//		InputType:  strptr(twoTypeIdStructName),
+			//		OutputType: strptr("google.protobuf.Empty"),
+			//	},
+			//)
+
+			mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
+			if err != nil {
+				log.Println(err)
+				return out, err
+			}
 
 			out.svc.Method = append(
 				out.svc.Method,
-				&descriptorpb.MethodDescriptorProto{
-					Name:       strptr(fmt.Sprintf("Add%sById", edge.Type.Name)),
-					InputType:  strptr(twoTypeIdStructName),
-					OutputType: strptr("google.protobuf.Empty"),
-				},
+				mRemove,
 			)
-
-			out.svc.Method = append(
-				out.svc.Method,
-				&descriptorpb.MethodDescriptorProto{
-					Name:       strptr(fmt.Sprintf("Remove%s", edge.Type.Name)),
-					InputType:  strptr(twoTypeIdStructName),
-					OutputType: strptr("google.protobuf.Empty"),
-				},
-			)
+			//out.svc.Method = append(
+			//	out.svc.Method,
+			//	&descriptorpb.MethodDescriptorProto{
+			//		Name:       strptr(fmt.Sprintf("Remove%s", edge.Type.Name)),
+			//		InputType:  strptr(twoTypeIdStructName),
+			//		OutputType: strptr("google.protobuf.Empty"),
+			//	},
+			//)
 		}
 	}
 	// >
@@ -290,4 +276,83 @@ func nodeIdAndEdgeIdUrlTpl(node *gen.Type, edge *gen.Edge) (string, error) {
 		return "", err
 	}
 	return sb.String(), nil
+}
+
+func edgeMethodAdd(genType *gen.Type, edge *gen.Edge, methodEdgeAdd *descriptorpb.MethodDescriptorProto) (*descriptorpb.MethodDescriptorProto, error) {
+	url, err := edgeAddUrlTpl(genType, edge)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	httpRule := &pbHttpOpt.HttpRule{
+		Pattern: &pbHttpOpt.HttpRule_Post{
+			Post: url,
+		},
+	}
+	proto.SetExtension(methodEdgeAdd.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s", genType.Name, edge.Type.Name)})
+	proto.SetExtension(
+		methodEdgeAdd.Options,
+		pbHttpOpt.E_Http,
+		httpRule,
+	)
+
+	return methodEdgeAdd, nil
+}
+
+func edgeMethodAddById(genType *gen.Type, edge *gen.Edge, twoTypeIdStructName string) (*descriptorpb.MethodDescriptorProto, error) {
+	url, err := nodeIdAndEdgeIdUrlTpl(genType, edge)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	httpRule := &pbHttpOpt.HttpRule{
+		Pattern: &pbHttpOpt.HttpRule_Post{
+			Post: url,
+		},
+	}
+
+	methodEdgeAddById := &descriptorpb.MethodDescriptorProto{
+		Name:       strptr(fmt.Sprintf("Add%sById", edge.Type.Name)),
+		InputType:  strptr(twoTypeIdStructName),
+		OutputType: strptr("google.protobuf.Empty"),
+		Options:    &descriptorpb.MethodOptions{},
+	}
+
+	proto.SetExtension(methodEdgeAddById.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s by id", genType.Name, edge.Type.Name)})
+	proto.SetExtension(
+		methodEdgeAddById.Options,
+		pbHttpOpt.E_Http,
+		httpRule,
+	)
+
+	return methodEdgeAddById, nil
+}
+
+func edgeMethodRemove(genType *gen.Type, edge *gen.Edge, twoTypeIdStructName string) (*descriptorpb.MethodDescriptorProto, error) {
+	url, err := nodeIdAndEdgeIdUrlTpl(genType, edge)
+	if err != nil {
+		return nil, err
+	}
+	methodEdgeRemove := &descriptorpb.MethodDescriptorProto{
+		Name:       strptr(fmt.Sprintf("Remove%s", edge.Type.Name)),
+		InputType:  strptr(twoTypeIdStructName),
+		OutputType: strptr("google.protobuf.Empty"),
+		Options:    &descriptorpb.MethodOptions{},
+	}
+
+	httpRule := &pbHttpOpt.HttpRule{
+		Pattern: &pbHttpOpt.HttpRule_Delete{
+			Delete: url,
+		},
+	}
+
+	proto.SetExtension(methodEdgeRemove.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Remove %s from %s by id", edge.Type.Name, genType.Name)})
+	proto.SetExtension(
+		methodEdgeRemove.Options,
+		pbHttpOpt.E_Http,
+		httpRule,
+	)
+
+	return methodEdgeRemove, nil
 }
