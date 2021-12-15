@@ -116,6 +116,10 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 		}
 		adaptor.AddMessageDescriptorNoExtractDep(pkgName, twoTypeStruct)
 		if (edge.Rel.Type == gen.O2O) || (edge.Rel.Type == gen.O2M) {
+			if edge.Rel.Type == gen.O2O && edge.Owner.Name != genType.Name {
+				continue
+			}
+			// log.Printf("node %s edge %s owner %s\n", genType.Name, edge.Name, edge.Owner.Name)
 			methodEdgeAdd := &descriptorpb.MethodDescriptorProto{
 				Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
 				InputType:  strptr(edge.Type.Name),
@@ -136,7 +140,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				methodEdgeAdd,
 			)
 
-			proto.SetExtension(methodEdgeAdd.Options, options.E_Openapiv2Operation, &options.Operation{Summary: ""})
+			proto.SetExtension(methodEdgeAdd.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s", genType.Name, edge.Type.Name)})
 			proto.SetExtension(
 				methodEdgeAdd.Options,
 				pbHttpOpt.E_Http,
@@ -165,7 +169,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				methodEdgeAddById,
 			)
 
-			proto.SetExtension(methodEdgeAddById.Options, options.E_Openapiv2Operation, &options.Operation{Summary: ""})
+			proto.SetExtension(methodEdgeAddById.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s by id", genType.Name, edge.Type.Name)})
 			proto.SetExtension(
 				methodEdgeAddById.Options,
 				pbHttpOpt.E_Http,
@@ -179,12 +183,16 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				Options:    &descriptorpb.MethodOptions{},
 			}
 
+			httpRule.Pattern = &pbHttpOpt.HttpRule_Delete{
+				Delete: url,
+			}
+
 			out.svc.Method = append(
 				out.svc.Method,
 				methodEdgeRemove,
 			)
 
-			proto.SetExtension(methodEdgeRemove.Options, options.E_Openapiv2Operation, &options.Operation{Summary: ""})
+			proto.SetExtension(methodEdgeRemove.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Remove %s from %s by id", edge.Type.Name, genType.Name)})
 			proto.SetExtension(
 				methodEdgeRemove.Options,
 				pbHttpOpt.E_Http,
