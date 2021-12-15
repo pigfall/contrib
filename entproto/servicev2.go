@@ -147,6 +147,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 			edgePBDesc.Name = strptr(reqName)
 			edgePBDesc.Field = append(edgePBDesc.Field, &descriptorpb.FieldDescriptorProto{
 				Name: strptr(genType.ID.StorageKey()),
+				Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
 			})
 			// TODO
 			adaptor.AddMessageDescriptorNoExtractDep(pkgName, edgePBDesc)
