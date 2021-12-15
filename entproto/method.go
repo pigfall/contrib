@@ -16,12 +16,15 @@ const(
 	MethodInOutType_PageQuery
 	MethodInOutType_GenTypes
 	MethodInOutType_Count
+	MethodInOutType_Custome
 )
 
 type Method struct {
 	Name string
 	InputType MethodInOutType
 	OutputType MethodInOutType
+	InputCustomeTypeName string
+	OutputCustomeTypeName string
 	HttpMapping *HttpMapping
 	Summary string
 }

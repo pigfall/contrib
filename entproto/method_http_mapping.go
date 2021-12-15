@@ -1,6 +1,7 @@
 package entproto
 
 import(
+	strHelper "github.com/iancoleman/strcase"
 	"strings"
 	"log"
 	"text/template"
@@ -55,6 +56,7 @@ func (this *HttpMapping) Visit(method *Method,methodDesc *descriptorpb.MethodDes
 	httpRule := &pbHttpOpt.HttpRule{}
 	funcMap := template.FuncMap{
 		"ToLower": strings.ToLower,
+		"ToSnake": strHelper.ToSnake,
 	}
 	urlTplIns,err := template.New("").Funcs(funcMap).Parse(this.UrlTpl)
 	if err != nil{

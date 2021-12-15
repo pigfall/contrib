@@ -18,6 +18,83 @@ import (
 )
 
 const (
+	MethodCreate   = "Create"
+	MethodUpdate   = "Update"
+	MethodDelete   = "Delete"
+	MethodFindById = "FindById"
+	MethodFind     = "Find"
+	MethodCount    = "Count"
+)
+
+const url_gen_type_id_tpl = `/{{ .genType.Name | ToSnake | ToLower }}s/{ {{- .genTypeId -}} }`
+const url_gen_type = `/{{ .genType.Name | ToSnake | ToLower }}s`
+
+func BuildInCURDMethod() []*Method {
+	return []*Method{
+		NewMethod(
+			MethodCreate,
+			MethodInOutType_GenType,
+			MethodInOutType_GenTypeId,
+			MethodOptionHttpOption(
+				HttpMappingNew("post", url_gen_type),
+			),
+		),
+
+		NewMethod(
+			MethodUpdate,
+			MethodInOutType_GenType,
+			MethodInOutType_Empty,
+			MethodOptionHttpOption(
+				//entproto.HttpMappingNew("patch","/{{ .genType.Name | ToLower }}s/{ {{- .genTypeId -}} }"),
+				HttpMappingNew("patch", url_gen_type_id_tpl),
+			),
+		),
+
+		NewMethod(
+			MethodDelete,
+			MethodInOutType_GenTypeId,
+			MethodInOutType_Empty,
+			MethodOptionHttpOption(
+				HttpMappingNew("delete", url_gen_type_id_tpl),
+			),
+		),
+
+		NewMethod(
+			MethodFindById,
+			MethodInOutType_GenTypeId,
+			MethodInOutType_GenType,
+			MethodOptionHttpOption(
+				HttpMappingNew("get", url_gen_type_id_tpl),
+			),
+		),
+
+		NewMethod(
+			MethodFind,
+			MethodInOutType_PageQuery,
+			MethodInOutType_GenTypes,
+			MethodOptionHttpOption(
+				HttpMappingNew("get", url_gen_type),
+			),
+		),
+
+		NewMethod(
+			MethodCount,
+			MethodInOutType_GenType,
+			MethodInOutType_Count,
+			MethodOptionHttpOption(
+				HttpMappingNew("get", url_gen_type+"/count"),
+			),
+		),
+	}
+
+}
+func BuildInCURDService() schema.Annotation {
+	return ServiceV2(
+		BuildInCURDMethod()...,
+	)
+}
+
+const (
 	ServiceV2Annotation = "ProtoServiceV2"
 )
 
