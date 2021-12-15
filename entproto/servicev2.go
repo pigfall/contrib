@@ -126,14 +126,15 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
 				Options:    &descriptorpb.MethodOptions{},
 			}
-			httpRule := &pbHttpOpt.HttpRule{}
 			url, err := edgeAddUrlTpl(genType, edge)
 			if err != nil {
 				log.Println(err)
 				return out, err
 			}
-			httpRule.Pattern = &pbHttpOpt.HttpRule_Post{
-				Post: url,
+			httpRule := &pbHttpOpt.HttpRule{
+				Pattern: &pbHttpOpt.HttpRule_Post{
+					Post: url,
+				},
 			}
 			out.svc.Method = append(
 				out.svc.Method,
@@ -147,16 +148,18 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				httpRule,
 			)
 
-			httpRule = &pbHttpOpt.HttpRule{}
-
 			url, err = nodeIdAndEdgeIdUrlTpl(genType, edge)
 			if err != nil {
 				log.Println(err)
 				return out, err
 			}
-			httpRule.Pattern = &pbHttpOpt.HttpRule_Post{
-				Post: url,
+
+			httpRule = &pbHttpOpt.HttpRule{
+				Pattern: &pbHttpOpt.HttpRule_Post{
+					Post: url,
+				},
 			}
+			log.Println(url)
 
 			methodEdgeAddById := &descriptorpb.MethodDescriptorProto{
 				Name:       strptr(fmt.Sprintf("Add%sById", edge.Type.Name)),
@@ -183,8 +186,10 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				Options:    &descriptorpb.MethodOptions{},
 			}
 
-			httpRule.Pattern = &pbHttpOpt.HttpRule_Delete{
-				Delete: url,
+			httpRule = &pbHttpOpt.HttpRule{
+				Pattern: &pbHttpOpt.HttpRule_Delete{
+					Delete: url,
+				},
 			}
 
 			out.svc.Method = append(
