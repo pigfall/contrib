@@ -243,7 +243,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				log.Println((err))
 				return out, err
 			}
-			reqName := fmt.Sprintf("Add%sReq", edge.Type.Name)
+			reqName := fmt.Sprintf("%sAdd%sReq", node.Name, edge.Type.Name)
 			edgePBDesc.Name = strptr(reqName)
 			edgePBDesc.Field = append(edgePBDesc.Field, &descriptorpb.FieldDescriptorProto{
 				Name: strptr(genType.ID.StorageKey()),

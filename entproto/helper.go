@@ -3,6 +3,7 @@ package entproto
 import (
 	"fmt"
 
+	"entgo.io/ent"
 	"entgo.io/ent/entc/gen"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
@@ -34,4 +35,37 @@ func FindSchemaByNameX(nodes []*gen.Type, name string) *gen.Type {
 
 func BuildSchemaIdStructName(node *gen.Type) string {
 	return node.ID.StorageKey()
+}
+
+func FieldAdder() func() int {
+	return buildAdderFrom(0)
+}
+
+func EdgeAdder(fields []ent.Field) func() int {
+	base := FindMaxFieldNum(fields)
+	return buildAdderFrom(base)
+}
+
+func FindMaxFieldNum(fields []ent.Field) int {
+	var maxNum int = 1
+	for _, field := range fields {
+		for _, annotation := range field.Descriptor().Annotations {
+			if annotation.Name() == FieldAnnotation {
+				fieldNum := PBFieldNumber(annotation)
+				if fieldNum > maxNum {
+					maxNum = fieldNum
+				}
+			}
+		}
+
+	}
+	return maxNum
+}
+
+func buildAdderFrom(base int) func() int {
+	var value = base
+	return func() int {
+		value++
+		return value
+	}
 }
