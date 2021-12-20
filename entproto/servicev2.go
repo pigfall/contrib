@@ -365,6 +365,7 @@ func edgeMethodAdd(genType *gen.Type, edge *gen.Edge, methodEdgeAdd *descriptorp
 		Pattern: &pbHttpOpt.HttpRule_Post{
 			Post: url,
 		},
+		Body: "*",
 	}
 	proto.SetExtension(methodEdgeAdd.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s", genType.Name, edge.Type.Name)})
 	proto.SetExtension(
