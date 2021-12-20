@@ -94,6 +94,7 @@ func (this *HttpMapping) Visit(method *Method, methodDesc *descriptorpb.MethodDe
 		httpRule.Pattern = &pbHttpOpt.HttpRule_Patch{
 			Patch: url,
 		}
+		httpRule.Body = "*"
 	case "delete":
 		httpRule.Pattern = &pbHttpOpt.HttpRule_Delete{
 			Delete: url,
