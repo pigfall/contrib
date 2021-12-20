@@ -16,19 +16,20 @@ package entproto
 
 import (
 	"errors"
-	"log"
 	"fmt"
+	"log"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
 	"entgo.io/ent/entc/gen"
 	"entgo.io/ent/schema/field"
-	"github.com/jhump/protoreflect/desc"
-	"os"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options"
+	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/builder"
-	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/descriptorpb"
 	_ "google.golang.org/protobuf/types/known/emptypb"
 	_ "google.golang.org/protobuf/types/known/timestamppb"
 	_ "google.golang.org/protobuf/types/known/wrapperspb" // needed to load wkt to global proto registry
@@ -78,9 +79,8 @@ type Adapter struct {
 	descriptors      map[string]*desc.FileDescriptor
 	schemaProtoFiles map[string]string
 	errors           map[string]error
-	protoPackages map[string]*descriptorpb.FileDescriptorProto
+	protoPackages    map[string]*descriptorpb.FileDescriptorProto
 }
-
 
 // AllFileDescriptors returns a file descriptor per proto package for each package that contains
 // a successfully parsed ent.Schema
@@ -101,63 +101,63 @@ func (a *Adapter) GetMessageDescriptor(schemaName string) (*desc.MessageDescript
 	}
 	return nil, errors.New("entproto: couldnt find message descriptor")
 }
-func (a *Adapter ) AddMessageDescriptorNoExtractDep(packageName string,messageDescriptor *descriptorpb.DescriptorProto)error{
-	return a.addMessageDescriptor(packageName,messageDescriptor ,false)
+func (a *Adapter) AddMessageDescriptorNoExtractDep(packageName string, messageDescriptor *descriptorpb.DescriptorProto) error {
+	return a.addMessageDescriptor(packageName, messageDescriptor, false)
 }
-func (a *Adapter ) addMessageDescriptor(packageName string,messageDescriptor *descriptorpb.DescriptorProto,extractDep bool)error{
-		protoPkg := packageName
+func (a *Adapter) addMessageDescriptor(packageName string, messageDescriptor *descriptorpb.DescriptorProto, extractDep bool) error {
+	protoPkg := packageName
 
-		if _, ok := a.protoPackages[protoPkg]; !ok {
-			goPkg := a.goPackageName(protoPkg)
+	if _, ok := a.protoPackages[protoPkg]; !ok {
+		goPkg := a.goPackageName(protoPkg)
 
-			// < custome go option package
-			optionGoPackage, exist := os.LookupEnv("OPTION_GO_PACKAGE")
-			if exist{
-				goPkg = optionGoPackage
-			}
-			// >
-
-			a.protoPackages[protoPkg] = &descriptorpb.FileDescriptorProto{
-				Name:    relFileName(protoPkg),
-				Package: &protoPkg,
-				Syntax:  strptr("proto3"),
-				Options: &descriptorpb.FileOptions{
-					GoPackage: &goPkg,
-				},
-			}
+		// < custome go option package
+		optionGoPackage, exist := os.LookupEnv("OPTION_GO_PACKAGE")
+		if exist {
+			goPkg = optionGoPackage
 		}
-		fd := a.protoPackages[protoPkg]
-		for _,v := range fd.MessageType{
-			if v.GetName() == messageDescriptor.GetName(){
-				return nil
-			}
-		}
-		fd.MessageType = append(fd.MessageType,messageDescriptor)
+		// >
 
-		if extractDep{
-			depPaths, err := a.extractDepPaths(messageDescriptor)
-			if err != nil {
-				log.Println(err)
-				return err
-			}
-			fd.Dependency = append(fd.Dependency, depPaths...)
+		a.protoPackages[protoPkg] = &descriptorpb.FileDescriptorProto{
+			Name:    relFileName(protoPkg),
+			Package: &protoPkg,
+			Syntax:  strptr("proto3"),
+			Options: &descriptorpb.FileOptions{
+				GoPackage: &goPkg,
+			},
+		}
+	}
+	fd := a.protoPackages[protoPkg]
+	for _, v := range fd.MessageType {
+		if v.GetName() == messageDescriptor.GetName() {
 			return nil
 		}
+	}
+	fd.MessageType = append(fd.MessageType, messageDescriptor)
+
+	if extractDep {
+		depPaths, err := a.extractDepPaths(messageDescriptor)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+		fd.Dependency = append(fd.Dependency, depPaths...)
 		return nil
+	}
+	return nil
 }
 
-func (a *Adapter ) AddMessageDescriptor(packageName string,messageDescriptor *descriptorpb.DescriptorProto)error{
-	return a.addMessageDescriptor(packageName,messageDescriptor ,true)
+func (a *Adapter) AddMessageDescriptor(packageName string, messageDescriptor *descriptorpb.DescriptorProto) error {
+	return a.addMessageDescriptor(packageName, messageDescriptor, true)
 }
 
 // parse transforms the ent gen.Type objects into file descriptors
 func (a *Adapter) parse() error {
 	var dpbDescriptors []*descriptorpb.FileDescriptorProto
 
-	a.protoPackages  = make(map[string]*descriptorpb.FileDescriptorProto)
-	protoPackages :=a.protoPackages
+	a.protoPackages = make(map[string]*descriptorpb.FileDescriptorProto)
+	protoPackages := a.protoPackages
 
-	msgContaienrs := make([]*MsgContainer,0)
+	msgContaienrs := make([]*MsgContainer, 0)
 
 	for _, genType := range a.graph.Nodes {
 		messageDescriptor, err := a.toProtoMessageDescriptor(genType)
@@ -175,8 +175,8 @@ func (a *Adapter) parse() error {
 			log.Println(err)
 			continue
 		}
-		err = a.AddMessageDescriptor(protoPkg,messageDescriptor)
-		if err != nil{
+		err = a.AddMessageDescriptor(protoPkg, messageDescriptor)
+		if err != nil {
 			log.Println(err)
 			return err
 		}
@@ -185,7 +185,7 @@ func (a *Adapter) parse() error {
 
 		a.schemaProtoFiles[genType.Name] = *fd.Name
 
-		msgContaienrs = append(msgContaienrs,&MsgContainer{genType:genType,genTypePBMsg:messageDescriptor})
+		msgContaienrs = append(msgContaienrs, &MsgContainer{genType: genType, genTypePBMsg: messageDescriptor})
 
 		svcAnnotation, err := extractServiceAnnotation(genType)
 		if errors.Is(err, errNoServiceDef) {
@@ -209,16 +209,16 @@ func (a *Adapter) parse() error {
 	}
 
 	// < add message MsgId
-	for _,msgContainer := range msgContaienrs {
+	for _, msgContainer := range msgContaienrs {
 		genType := msgContainer.genType
 		pbMsgId := &descriptorpb.DescriptorProto{
-			Name:     strptr(fmt.Sprintf("%sId",msgContainer.genType.Name)),
+			Name:     strptr(fmt.Sprintf("%sId", msgContainer.genType.Name)),
 			EnumType: []*descriptorpb.EnumDescriptorProto(nil),
-			Field:[]*descriptorpb.FieldDescriptorProto{
+			Field: []*descriptorpb.FieldDescriptorProto{
 				{
-					Name:strptr(genType.ID.StorageKey()),
-					Number:int32ptr(1),
-					Type:descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					Name:   strptr(genType.ID.StorageKey()),
+					Number: int32ptr(1),
+					Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
 				},
 			},
 		}
@@ -227,23 +227,23 @@ func (a *Adapter) parse() error {
 			log.Println(err)
 			return err
 		}
-		err = a.AddMessageDescriptor(protoPkg,pbMsgId)
-		if err != nil{
+		err = a.AddMessageDescriptor(protoPkg, pbMsgId)
+		if err != nil {
 			log.Println(err)
 			return err
 		}
-		msgContainer.genTypePBMsgId =pbMsgId
+		msgContainer.genTypePBMsgId = pbMsgId
 	}
 	// >
 
 	// < generate servicev2
-	for _,msgContainer := range msgContaienrs {
+	for _, msgContainer := range msgContaienrs {
 		genType := msgContainer.genType
-		svcV2,err := extractServiceV2Annotation(genType)
+		svcV2, err := extractServiceV2Annotation(genType)
 		if errors.Is(err, errNoServiceDef) {
 			continue
 		}
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 			return err
 		}
@@ -252,41 +252,41 @@ func (a *Adapter) parse() error {
 			log.Println(err)
 			return err
 		}
-		countPBMsg:= &descriptorpb.DescriptorProto{
-			Name:strptr("CountNumber"),
-			Field:[]*descriptorpb.FieldDescriptorProto{
+		countPBMsg := &descriptorpb.DescriptorProto{
+			Name: strptr("CountNumber"),
+			Field: []*descriptorpb.FieldDescriptorProto{
 				{
-					Name:strptr("value"),
-					Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+					Name: strptr("value"),
+					Type: descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
 				},
 			},
 		}
-		err = a.AddMessageDescriptorNoExtractDep(protoPkg,countPBMsg)
-		if err != nil{
+		err = a.AddMessageDescriptorNoExtractDep(protoPkg, countPBMsg)
+		if err != nil {
 			log.Println(err)
 			return err
 		}
 		msgContainer.countPBMsg = countPBMsg
 
 		// < generate pageFind entity
-		genTypePBMsgCopy,err := a.toProtoMessageDescriptor(msgContainer.genType)
-		if err != nil{
+		genTypePBMsgCopy, err := a.toProtoMessageDescriptor(msgContainer.genType)
+		if err != nil {
 			log.Println(err)
 			return err
 		}
 		// change name
-		genTypePBMsgCopy.Name = strptr(fmt.Sprintf("%sPageQuery",genTypePBMsgCopy.GetName()))
+		genTypePBMsgCopy.Name = strptr(fmt.Sprintf("%sPageQuery", genTypePBMsgCopy.GetName()))
 		// add page query field
 		genTypePBMsgCopy.Field = append(
 			genTypePBMsgCopy.Field,
 			[]*descriptorpb.FieldDescriptorProto{
 				{
-					Name:strptr("page_index"),
-					Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+					Name: strptr("page_index"),
+					Type: descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
 				},
 				{
-					Name:strptr("page_size"),
-					Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+					Name: strptr("page_size"),
+					Type: descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
 				},
 			}...,
 		)
@@ -305,9 +305,9 @@ func (a *Adapter) parse() error {
 		}
 		fd := protoPackages[protoPkg]
 		fd.Service = append(fd.Service, svcResources.svc)
-		for _,v := range svcResources.svcMessages{
-			err = a.AddMessageDescriptor(protoPkg,v)
-			if err != nil{
+		for _, v := range svcResources.svcMessages {
+			err = a.AddMessageDescriptor(protoPkg, v)
+			if err != nil {
 				log.Println(err)
 				return err
 			}
@@ -316,8 +316,8 @@ func (a *Adapter) parse() error {
 	}
 	// >
 
-	// 
-	// 
+	//
+	//
 
 	// Append the well known types to the context.
 	for _, wktPath := range wktsPaths {
@@ -416,7 +416,7 @@ func relFileName(packageName string) *string {
 func (a *Adapter) extractDepPaths(m *descriptorpb.DescriptorProto) ([]string, error) {
 	var out []string
 	for _, fld := range m.Field {
-		if fld.Type != nil{
+		if fld.Type != nil {
 			if *fld.Type == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE { //nolint
 				fieldTypeName := *fld.TypeName
 				if wp, ok := wktsPaths[fieldTypeName]; ok { //nolint
@@ -435,7 +435,7 @@ func (a *Adapter) extractDepPaths(m *descriptorpb.DescriptorProto) ([]string, er
 					}
 					selfType, err := extractGenTypeByName(a.graph, *m.Name)
 					if err != nil {
-						log.Printf("%+v\n",m)
+						log.Printf("%+v\n", m)
 						log.Println(fieldTypeName)
 						log.Println(err)
 						return nil, err
@@ -448,11 +448,11 @@ func (a *Adapter) extractDepPaths(m *descriptorpb.DescriptorProto) ([]string, er
 				} else {
 					//return nil, fmt.Errorf("entproto: failed extracting deps, unknown path for %s", fieldTypeName)
 					// TODO
-					return nil,nil
+					return nil, nil
 				}
 			}
 		}
-		
+
 	}
 	return out, nil
 }
@@ -503,7 +503,7 @@ func (a *Adapter) toProtoMessageDescriptor(genType *gen.Type) (*descriptorpb.Des
 			return nil, err
 		}
 		// <
-		if protoField == nil{
+		if protoField == nil {
 			// ignore this field
 			continue
 		}
@@ -537,57 +537,55 @@ func (a *Adapter) toProtoMessageDescriptor(genType *gen.Type) (*descriptorpb.Des
 }
 
 func (a *Adapter) toProtoMessageDescriptorCountReq(genType *gen.Type) (*descriptorpb.DescriptorProto, error) {
-	msg,err := a.toProtoMessageDescriptor(genType)
-	if err != nil{
-		return nil,err
+	msg, err := a.toProtoMessageDescriptor(genType)
+	if err != nil {
+		return nil, err
 	}
-	var msgName = fmt.Sprintf("%sCountReq",msg.GetName())
+	var msgName = fmt.Sprintf("%sCountReq", msg.GetName())
 	msg.Name = &msgName
-	return msg,nil
+	return msg, nil
 }
 
-func (a *Adapter) toProtoMessageDescriptorPageQuery(genType *gen.Type,msg *descriptorpb.DescriptorProto) (*descriptorpb.DescriptorProto, error) {
-	rawMsg,err := a.toProtoMessageDescriptor(genType)
-	if err != nil{
-		return nil,err
+func (a *Adapter) toProtoMessageDescriptorPageQuery(genType *gen.Type, msg *descriptorpb.DescriptorProto) (*descriptorpb.DescriptorProto, error) {
+	rawMsg, err := a.toProtoMessageDescriptor(genType)
+	if err != nil {
+		return nil, err
 	}
 
-	msgName := fmt.Sprintf("%sPageQuery",*rawMsg.Name)
+	msgName := fmt.Sprintf("%sPageQuery", *rawMsg.Name)
 	rawMsg.Name = &msgName
 
 	var maxFieldNumber int32 = 1
-	for _,field := range rawMsg.Field{
+	for _, field := range rawMsg.Field {
 		if (*field.Number) > maxFieldNumber {
 			maxFieldNumber = (*field.Number)
 		}
 	}
 
-
 	var pageIndex = "pageIndex"
 	var pageSize = "pageSize"
 
-	for i,fldName := range []string{pageIndex,pageSize}{
-		fldNum := maxFieldNumber  + int32(1 + i)
-		addFld := func(fldNum int32,fldName string){
-			rawMsg.Field = append(rawMsg.Field,&descriptorpb.FieldDescriptorProto{
-				Name:&fldName,
-				Number:&(fldNum),
-				Type:descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+	for i, fldName := range []string{pageIndex, pageSize} {
+		fldNum := maxFieldNumber + int32(1+i)
+		addFld := func(fldNum int32, fldName string) {
+			rawMsg.Field = append(rawMsg.Field, &descriptorpb.FieldDescriptorProto{
+				Name:   &fldName,
+				Number: &(fldNum),
+				Type:   descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
 			})
 		}
-		addFld(fldNum,fldName)
+		addFld(fldNum, fldName)
 	}
 
-	return rawMsg,nil
+	return rawMsg, nil
 }
-
 
 func verifyNoDuplicateFieldNumbers(msg *descriptorpb.DescriptorProto) error {
 	mem := make(map[int32]struct{})
 	for _, fld := range msg.Field {
 		if _, seen := mem[fld.GetNumber()]; seen {
 			return fmt.Errorf("entproto: field %d already defined on message %q",
-			fld.GetNumber(), msg.GetName())
+				fld.GetNumber(), msg.GetName())
 		} else {
 			mem[fld.GetNumber()] = struct{}{}
 		}
@@ -603,9 +601,9 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 	if err != nil {
 		return nil, fmt.Errorf("entproto: failed extracting proto field number annotation: %w", err)
 	}
-	// < ignore 
-	if edgeAnnotation == nil{
-		return nil,nil
+	// < ignore
+	if edgeAnnotation == nil {
+		return nil, nil
 	}
 	// >
 
@@ -613,13 +611,13 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 		return nil, fmt.Errorf("entproto: edge %q has number 1 which is reserved for id", e.Name)
 	}
 
-	if edgeAnnotation.Type != descriptorpb.FieldDescriptorProto_Type(0){
+	if edgeAnnotation.Type != descriptorpb.FieldDescriptorProto_Type(0) {
 		t = edgeAnnotation.Type
 	}
 
 	// < edge name
 	var edgeName = e.Name
-	if len(edgeAnnotation.FieldName) > 0{
+	if len(edgeAnnotation.FieldName) > 0 {
 		edgeName = edgeAnnotation.FieldName
 	}
 	// >
@@ -630,9 +628,6 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 		Name:   &edgeName,
 		Type:   &t,
 	}
-
-
-
 
 	if !e.Unique {
 		fieldDesc.Label = &repeatedFieldLabel
@@ -656,6 +651,12 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 	} else {
 		fqn := dstAnnotation.Package + "." + msgTypeName
 		fieldDesc.TypeName = &fqn
+	}
+
+	if e.Optional {
+		t := descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
+		fieldDesc.Type = &t
+		fieldDesc.TypeName = strptr("google.protobuf.StringValue")
 	}
 
 	return fieldDesc, nil
@@ -705,24 +706,24 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 	}
 
 	// < ignore this field
-	if fann == nil{
-		return nil,nil
+	if fann == nil {
+		return nil, nil
 	}
 	// >
 
 	// < fieldName
-	if len(fann.FieldName) > 0{
+	if len(fann.FieldName) > 0 {
 		fieldDesc.Name = &fann.FieldName
 	}
-	// > 
+	// >
 
 	// < field comment
 	comment := extractFieldCommnt(f)
-	if len(comment) > 0{
-		if fieldDesc.Options == nil{
+	if len(comment) > 0 {
+		if fieldDesc.Options == nil {
 			fieldDesc.Options = &descriptorpb.FieldOptions{}
 		}
-		proto.SetExtension(fieldDesc.Options,options.E_Openapiv2Field,&options.JSONSchema{Description:comment})
+		proto.SetExtension(fieldDesc.Options, options.E_Openapiv2Field, &options.JSONSchema{Description: comment})
 	}
 	// >
 
@@ -740,7 +741,7 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 	}
 	typeDetails, err := extractProtoTypeDetails(f)
 	if err != nil {
-		log.Println(err, " +  ",f.Type.Type)
+		log.Println(err, " +  ", f.Type.Type)
 		return nil, err
 	}
 	fieldDesc.Type = &typeDetails.protoType
