@@ -197,44 +197,44 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				continue
 			}
 			// log.Printf("node %s edge %s owner %s\n", genType.Name, edge.Name, edge.Owner.Name)
-			mAdd, err := edgeMethodAdd(
-				genType,
-				edge,
-				&descriptorpb.MethodDescriptorProto{
-					Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
-					InputType:  strptr(edge.Type.Name),
-					OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
-					Options:    &descriptorpb.MethodOptions{},
-				},
-			)
-			if err != nil {
-				log.Println(err)
-				return out, err
+			if edge.Owner.Name == node.Name {
+				mAdd, err := edgeMethodAdd(
+					genType,
+					edge,
+					&descriptorpb.MethodDescriptorProto{
+						Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
+						InputType:  strptr(edge.Type.Name),
+						OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
+						Options:    &descriptorpb.MethodOptions{},
+					},
+				)
+				if err != nil {
+					log.Println(err)
+					return out, err
+				}
+				out.svc.Method = append(
+					out.svc.Method,
+					mAdd,
+				)
+				mAddById, err := edgeMethodAddById(genType, edge, twoTypeIdStructName)
+				if err != nil {
+					log.Println(err)
+					return out, err
+				}
+				out.svc.Method = append(
+					out.svc.Method,
+					mAddById,
+				)
+				mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
+				if err != nil {
+					log.Println(err)
+					return out, err
+				}
+				out.svc.Method = append(
+					out.svc.Method,
+					mRemove,
+				)
 			}
-			out.svc.Method = append(
-				out.svc.Method,
-				mAdd,
-			)
-
-			mAddById, err := edgeMethodAddById(genType, edge, twoTypeIdStructName)
-			if err != nil {
-				log.Println(err)
-				return out, err
-			}
-			out.svc.Method = append(
-				out.svc.Method,
-				mAddById,
-			)
-
-			mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
-			if err != nil {
-				log.Println(err)
-				return out, err
-			}
-			out.svc.Method = append(
-				out.svc.Method,
-				mRemove,
-			)
 
 			mGet, err := edgeMethodGet(adaptor, pkgName, genType, msgContainer, edge)
 			if err != nil {
@@ -259,36 +259,59 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				Name: strptr(genType.ID.StorageKey()),
 				Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
 			})
-			// TODO
 			adaptor.AddMessageDescriptorNoExtractDep(pkgName, edgePBDesc)
 
-			mAdd, err := edgeMethodAdd(
-				genType,
-				edge,
-				&descriptorpb.MethodDescriptorProto{
-					Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
-					InputType:  strptr(reqName),
-					OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
-					Options:    &descriptorpb.MethodOptions{},
-				},
-			)
-			if err != nil {
-				log.Println(err)
-				return out, err
-			}
-			out.svc.Method = append(
-				out.svc.Method,
-				mAdd,
-			)
+			if edge.Owner.Name == node.Name {
+				mAdd, err := edgeMethodAdd(
+					genType,
+					edge,
+					&descriptorpb.MethodDescriptorProto{
+						Name:       strptr(fmt.Sprintf("Add%s", edge.Type.Name)),
+						InputType:  strptr(reqName),
+						OutputType: strptr(fmt.Sprintf("%sId", edge.Type.Name)),
+						Options:    &descriptorpb.MethodOptions{},
+					},
+				)
+				if err != nil {
+					log.Println(err)
+					return out, err
+				}
+				out.svc.Method = append(
+					out.svc.Method,
+					mAdd,
+				)
 
-			mAddById, err := edgeMethodAddById(genType, edge, twoTypeIdStructName)
+				mAddById, err := edgeMethodAddById(genType, edge, twoTypeIdStructName)
+				if err != nil {
+					log.Println(err)
+					return out, err
+				}
+				out.svc.Method = append(
+					out.svc.Method,
+					mAddById,
+				)
+
+				mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
+				if err != nil {
+					log.Println(err)
+					return out, err
+				}
+
+				out.svc.Method = append(
+					out.svc.Method,
+					mRemove,
+				)
+
+			}
+
+			mGet, err := edgeMethodGet(adaptor, pkgName, genType, msgContainer, edge)
 			if err != nil {
 				log.Println(err)
 				return out, err
 			}
 			out.svc.Method = append(
 				out.svc.Method,
-				mAddById,
+				mGet,
 			)
 
 			//out.svc.Method = append(
@@ -300,16 +323,6 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 			//	},
 			//)
 
-			mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
-			if err != nil {
-				log.Println(err)
-				return out, err
-			}
-
-			out.svc.Method = append(
-				out.svc.Method,
-				mRemove,
-			)
 			//out.svc.Method = append(
 			//	out.svc.Method,
 			//	&descriptorpb.MethodDescriptorProto{
