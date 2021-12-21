@@ -44,6 +44,7 @@ func BuildPBDataCountField() *descriptorpb.FieldDescriptorProto {
 func BuildPBSchemaListField(schema *gen.Type) *descriptorpb.FieldDescriptorProto {
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     strptr(fmt.Sprintf("%ss", schema.Name)),
+		Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
 		TypeName: strptr(schema.Name),
 		Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
 	}

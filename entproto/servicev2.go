@@ -413,11 +413,23 @@ func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer 
 	}
 
 	edgeGetOutputTypeName := fmt.Sprintf("%sFind%ssRes", schemaName, edgeSchemaName)
+	var edgeNode *gen.Type
+	for _, node := range ad.graph.Nodes {
+		if node.Name == edge.Type.Name {
+			edgeNode = node
+			break
+		}
+	}
+	if edgeNode == nil {
+		err = fmt.Errorf("Not found edge %s in graph \n", edge.Type.Name)
+		log.Println(err)
+		return nil, err
+	}
 	edgeGetOutputType := &descriptorpb.DescriptorProto{
 		Name: strptr(edgeGetOutputTypeName),
 		Field: []*descriptorpb.FieldDescriptorProto{
 			BuildPBDataCountField(),
-			BuildPBSchemaListField(genType),
+			BuildPBSchemaListField(edgeNode),
 		},
 	}
 
@@ -443,7 +455,7 @@ func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer 
 		},
 	}
 
-	proto.SetExtension(methodEdge.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Get %s %s", edge.Type.Name, genType.Name)})
+	proto.SetExtension(methodEdge.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Get the %s of %s", edge.Type.Name, genType.Name)})
 	proto.SetExtension(
 		methodEdge.Options,
 		pbHttpOpt.E_Http,
@@ -465,7 +477,7 @@ func edgeMethodAdd(genType *gen.Type, edge *gen.Edge, methodEdgeAdd *descriptorp
 		},
 		Body: "*",
 	}
-	proto.SetExtension(methodEdgeAdd.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s", genType.Name, edge.Type.Name)})
+	proto.SetExtension(methodEdgeAdd.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s", edge.Type.Name, genType.Name)})
 	proto.SetExtension(
 		methodEdgeAdd.Options,
 		pbHttpOpt.E_Http,
@@ -495,7 +507,7 @@ func edgeMethodAddById(genType *gen.Type, edge *gen.Edge, twoTypeIdStructName st
 		Options:    &descriptorpb.MethodOptions{},
 	}
 
-	proto.SetExtension(methodEdgeAddById.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s by id", genType.Name, edge.Type.Name)})
+	proto.SetExtension(methodEdgeAddById.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Add %s to %s by id", edge.Type.Name, genType.Name)})
 	proto.SetExtension(
 		methodEdgeAddById.Options,
 		pbHttpOpt.E_Http,
