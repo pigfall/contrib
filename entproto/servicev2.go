@@ -82,7 +82,7 @@ func BuildInCURDMethod() []*Method {
 			MethodInOutType_GenType,
 			MethodInOutType_Count,
 			MethodOptionHttpOption(
-				HttpMappingNew("get", url_gen_type+"/count"),
+				HttpMappingNew("get", url_gen_type+url_gen_type+"/count"),
 			),
 		),
 	}
@@ -236,6 +236,16 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				mRemove,
 			)
 
+			//mGet, err := edgeMethodGet(genType, msgContainer, edge)
+			//if err != nil {
+			//	log.Println(err)
+			//	return out, err
+			//}
+			//out.svc.Method = append(
+			//	out.svc.Method,
+			//	mGet,
+			//)
+
 		} else if edge.Rel.Type == gen.M2M {
 			edgeNode := FindSchemaByNameX(adaptor.graph.Nodes, edge.Type.Name)
 			edgePBDesc, err := adaptor.toProtoMessageDescriptor(edgeNode)
@@ -353,6 +363,56 @@ func nodeIdAndEdgeIdUrlTpl(node *gen.Type, edge *gen.Edge) (string, error) {
 		return "", err
 	}
 	return sb.String(), nil
+}
+
+func edgeMethodGetUrl(node *gen.Type, edge *gen.Edge) (string, error) {
+	tplIns, err := tpl.New("").Parse("/{{.nodeName}}s/{ {{- .nodeIdStorageKey -}} }/{{.edgeTypeName}}s")
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	sb := strings.Builder{}
+	err = tplIns.Execute(&sb, map[string]interface{}{
+		"nodeName":             strHelper.ToSnake(node.Name),
+		"nodeIdStorageKey":     node.ID.StorageKey(),
+		"edgeTypeName":         strHelper.ToSnake(edge.Type.Name),
+		"edgeTypeIdStorageKey": edge.Type.ID.StorageKey(),
+	})
+
+	if err != nil {
+		log.Println(err)
+		return "", err
+	}
+	return sb.String(), nil
+}
+
+func edgeMethodGet(genType *gen.Type, msgContainer *MsgContainer, edge *gen.Edge) (*descriptorpb.MethodDescriptorProto, error) {
+	url, err := edgeMethodGetUrl(genType, edge)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	methodEdge := &descriptorpb.MethodDescriptorProto{
+		Name:       strptr(fmt.Sprintf("Find%s", edge.Type.Name)),
+		InputType:  strptr(*msgContainer.genTypePBMsgId.Name),
+		OutputType: strptr(edge.Type.Name),
+		Options:    &descriptorpb.MethodOptions{},
+	}
+
+	httpRule := &pbHttpOpt.HttpRule{
+		Pattern: &pbHttpOpt.HttpRule_Get{
+			Get: url,
+		},
+	}
+
+	proto.SetExtension(methodEdge.Options, options.E_Openapiv2Operation, &options.Operation{Summary: fmt.Sprintf("Get %s %s", edge.Type.Name, genType.Name)})
+	proto.SetExtension(
+		methodEdge.Options,
+		pbHttpOpt.E_Http,
+		httpRule,
+	)
+
+	return methodEdge, nil
 }
 
 func edgeMethodAdd(genType *gen.Type, edge *gen.Edge, methodEdgeAdd *descriptorpb.MethodDescriptorProto) (*descriptorpb.MethodDescriptorProto, error) {

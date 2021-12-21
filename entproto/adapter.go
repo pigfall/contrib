@@ -659,6 +659,8 @@ func (a *Adapter) extractEdgeFieldDescriptor(source *gen.Type, e *gen.Edge) (*de
 		fieldDesc.TypeName = strptr("google.protobuf.StringValue")
 	}
 
+	fieldDesc.JsonName = strptr(*fieldDesc.Name)
+
 	return fieldDesc, nil
 }
 
@@ -748,6 +750,8 @@ func toProtoFieldDescriptor(f *gen.Field) (*descriptorpb.FieldDescriptorProto, e
 	if typeDetails.messageName != "" {
 		fieldDesc.TypeName = &typeDetails.messageName
 	}
+
+	fieldDesc.JsonName = strptr(*fieldDesc.Name)
 
 	return fieldDesc, nil
 }
