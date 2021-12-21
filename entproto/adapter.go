@@ -280,14 +280,8 @@ func (a *Adapter) parse() error {
 		genTypePBMsgCopy.Field = append(
 			genTypePBMsgCopy.Field,
 			[]*descriptorpb.FieldDescriptorProto{
-				{
-					Name: strptr("page_index"),
-					Type: descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
-				},
-				{
-					Name: strptr("page_size"),
-					Type: descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
-				},
+				BuildPBPageIndexField(),
+				BuildPBPageSizeField(),
 			}...,
 		)
 		var pageQueryPBMsg = genTypePBMsgCopy

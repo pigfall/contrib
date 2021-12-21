@@ -236,15 +236,15 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				mRemove,
 			)
 
-			//mGet, err := edgeMethodGet(genType, msgContainer, edge)
-			//if err != nil {
-			//	log.Println(err)
-			//	return out, err
-			//}
-			//out.svc.Method = append(
-			//	out.svc.Method,
-			//	mGet,
-			//)
+			mGet, err := edgeMethodGet(adaptor, pkgName, genType, msgContainer, edge)
+			if err != nil {
+				log.Println(err)
+				return out, err
+			}
+			out.svc.Method = append(
+				out.svc.Method,
+				mGet,
+			)
 
 		} else if edge.Rel.Type == gen.M2M {
 			edgeNode := FindSchemaByNameX(adaptor.graph.Nodes, edge.Type.Name)
@@ -386,16 +386,54 @@ func edgeMethodGetUrl(node *gen.Type, edge *gen.Edge) (string, error) {
 	return sb.String(), nil
 }
 
-func edgeMethodGet(genType *gen.Type, msgContainer *MsgContainer, edge *gen.Edge) (*descriptorpb.MethodDescriptorProto, error) {
+func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer *MsgContainer, edge *gen.Edge) (*descriptorpb.MethodDescriptorProto, error) {
 	url, err := edgeMethodGetUrl(genType, edge)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	var schemaName = genType.Name
+	var edgeSchemaName = edge.Type.Name
+	edgeGetInputTypeName := fmt.Sprintf("%sFind%ssReq", schemaName, edgeSchemaName)
+	edgeGetInputType := &descriptorpb.DescriptorProto{
+		Name: strptr(edgeGetInputTypeName),
+		Field: []*descriptorpb.FieldDescriptorProto{
+			BuildPBPageIndexField(),
+			BuildPBPageSizeField(),
+			BuildPBSchemaIdField(genType),
+		},
+	}
+	err = ad.AddMessageDescriptorNoExtractDep(
+		pkgName,
+		edgeGetInputType,
+	)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	edgeGetOutputTypeName := fmt.Sprintf("%sFind%ssRes", schemaName, edgeSchemaName)
+	edgeGetOutputType := &descriptorpb.DescriptorProto{
+		Name: strptr(edgeGetOutputTypeName),
+		Field: []*descriptorpb.FieldDescriptorProto{
+			BuildPBDataCountField(),
+			BuildPBSchemaListField(genType),
+		},
+	}
+
+	err = ad.AddMessageDescriptorNoExtractDep(
+		pkgName,
+		edgeGetOutputType,
+	)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
 	methodEdge := &descriptorpb.MethodDescriptorProto{
-		Name:       strptr(fmt.Sprintf("Find%s", edge.Type.Name)),
-		InputType:  strptr(*msgContainer.genTypePBMsgId.Name),
-		OutputType: strptr(edge.Type.Name),
+		Name:       strptr(fmt.Sprintf("Find%ss", edgeSchemaName)),
+		InputType:  strptr(edgeGetInputTypeName),
+		OutputType: strptr(edgeGetOutputTypeName),
 		Options:    &descriptorpb.MethodOptions{},
 	}
 
