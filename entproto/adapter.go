@@ -216,9 +216,10 @@ func (a *Adapter) parse() error {
 			EnumType: []*descriptorpb.EnumDescriptorProto(nil),
 			Field: []*descriptorpb.FieldDescriptorProto{
 				{
-					Name:   strptr(genType.ID.StorageKey()),
-					Number: int32ptr(1),
-					Type:   descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					Name:     strptr(genType.ID.StorageKey()),
+					Number:   int32ptr(1),
+					Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					JsonName: (strptr(genType.ID.StorageKey())),
 				},
 			},
 		}

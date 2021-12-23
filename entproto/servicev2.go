@@ -182,12 +182,14 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 			Name: strptr(twoTypeIdStructName),
 			Field: []*descriptorpb.FieldDescriptorProto{
 				{
-					Name: strptr(BuildSchemaIdStructName(genType)),
-					Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					Name:     strptr(BuildSchemaIdStructName(genType)),
+					Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					JsonName: strptr(BuildSchemaIdStructName(genType)),
 				},
 				{
-					Name: strptr(BuildSchemaIdStructName(edge.Type)),
-					Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					Name:     strptr(BuildSchemaIdStructName(edge.Type)),
+					Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+					JsonName: strptr(BuildSchemaIdStructName(edge.Type)),
 				},
 			},
 		}
@@ -256,8 +258,9 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 			reqName := fmt.Sprintf("%sAdd%sReq", node.Name, edge.Type.Name)
 			edgePBDesc.Name = strptr(reqName)
 			edgePBDesc.Field = append(edgePBDesc.Field, &descriptorpb.FieldDescriptorProto{
-				Name: strptr(genType.ID.StorageKey()),
-				Type: descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				Name:     strptr(genType.ID.StorageKey()),
+				Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
+				JsonName: strptr(genType.ID.StorageKey()),
 			})
 			adaptor.AddMessageDescriptorNoExtractDep(pkgName, edgePBDesc)
 
