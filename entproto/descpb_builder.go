@@ -28,6 +28,17 @@ func BuildPBPageSizeField() *descriptorpb.FieldDescriptorProto {
 	}
 }
 
+// if need response record total
+func BuildPBPageRecordCount() *descriptorpb.FieldDescriptorProto {
+	name := strptr("page_data_count")
+	return &descriptorpb.FieldDescriptorProto{
+		Name:     name,
+		TypeName: strptr("google.protobuf.BoolValue"),
+		Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
+		JsonName: name,
+	}
+}
+
 // {schema}_id
 func BuildPBSchemaIdField(node *gen.Type) *descriptorpb.FieldDescriptorProto {
 	name := strptr(node.ID.StorageKey())
@@ -44,6 +55,17 @@ func BuildPBDataCountField() *descriptorpb.FieldDescriptorProto {
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     name,
 		Type:     descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
+		JsonName: name,
+	}
+}
+
+// data_count optional
+func BuildPBDataCountOptionalField() *descriptorpb.FieldDescriptorProto {
+	name := strptr("data_count")
+	return &descriptorpb.FieldDescriptorProto{
+		Name:     name,
+		TypeName:     strptr("google.protobuf.Int32Value"),
+		Type: descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
 		JsonName: name,
 	}
 }

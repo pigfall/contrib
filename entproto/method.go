@@ -15,6 +15,7 @@ const(
 	MethodInOutType_Empty 
 	MethodInOutType_PageQuery
 	MethodInOutType_GenTypes
+	MethodInOutType_GenTypesWithCount
 	MethodInOutType_Count
 	MethodInOutType_Custome
 )
@@ -44,7 +45,7 @@ func NewMethod(name string,inputType MethodInOutType,outputType MethodInOutType,
 	return m
 }
 
-func (this Method) inOutTypeToPBMsg(protoPkgName string,msgContainer *MsgContainer,methodInOutType MethodInOutType,repeatedMsg *descriptorpb.DescriptorProto)(*descriptorpb.DescriptorProto,string,error){
+func (this Method) inOutTypeToPBMsg(protoPkgName string,msgContainer *MsgContainer,methodInOutType MethodInOutType,repeatedMsg *descriptorpb.DescriptorProto,repeatedMsgWithCount *descriptorpb.DescriptorProto)(*descriptorpb.DescriptorProto,string,error){
 	switch  methodInOutType{
 	case MethodInOutType_GenType:
 		return msgContainer.genTypePBMsg,msgContainer.genTypePBMsg.GetName(),nil
@@ -54,6 +55,8 @@ func (this Method) inOutTypeToPBMsg(protoPkgName string,msgContainer *MsgContain
 		return nil,"google.protobuf.Empty",nil
 	case MethodInOutType_GenTypes:
 		return repeatedMsg,repeatedMsg.GetName(),nil
+	case MethodInOutType_GenTypesWithCount:
+		return repeatedMsgWithCount,repeatedMsgWithCount.GetName(),nil
 	case MethodInOutType_PageQuery:
 		return msgContainer.pageQueryPBMsg,msgContainer.pageQueryPBMsg.GetName(),nil
 		case MethodInOutType_Count:
@@ -66,13 +69,13 @@ func (this Method) inOutTypeToPBMsg(protoPkgName string,msgContainer *MsgContain
 }
 
 
-func (this Method)genMethodProtos(protoPkgName string,msgContainer *MsgContainer,repeatedMsg *descriptorpb.DescriptorProto) (methodResources, error) {
-	inputType,inputTypeName,err := this.inOutTypeToPBMsg(protoPkgName,msgContainer,this.InputType,repeatedMsg)
+func (this Method)genMethodProtos(protoPkgName string,msgContainer *MsgContainer,repeatedMsg *descriptorpb.DescriptorProto,genTypeMsgsListWithCount *descriptorpb.DescriptorProto) (methodResources, error) {
+	inputType,inputTypeName,err := this.inOutTypeToPBMsg(protoPkgName,msgContainer,this.InputType,repeatedMsg,genTypeMsgsListWithCount)
 	if err != nil{
 		log.Println(err)
 		return methodResources{},err
 	}
-	_,outputTypeName,err := this.inOutTypeToPBMsg(protoPkgName,msgContainer,this.OutputType,repeatedMsg)
+	_,outputTypeName,err := this.inOutTypeToPBMsg(protoPkgName,msgContainer,this.OutputType,repeatedMsg,genTypeMsgsListWithCount)
 	if err != nil{
 		log.Println(err)
 		return methodResources{},err

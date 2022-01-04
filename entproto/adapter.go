@@ -283,6 +283,7 @@ func (a *Adapter) parse() error {
 			[]*descriptorpb.FieldDescriptorProto{
 				BuildPBPageIndexField(),
 				BuildPBPageSizeField(),
+				BuildPBPageRecordCount(),
 			}...,
 		)
 		var pageQueryPBMsg = genTypePBMsgCopy

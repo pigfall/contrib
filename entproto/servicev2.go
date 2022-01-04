@@ -71,7 +71,7 @@ func BuildInCURDMethod() []*Method {
 		NewMethod(
 			MethodFind,
 			MethodInOutType_PageQuery,
-			MethodInOutType_GenTypes,
+			MethodInOutType_GenTypesWithCount,
 			MethodOptionHttpOption(
 				HttpMappingNew("get", url_gen_type),
 			),
@@ -165,8 +165,26 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 	}
 	// >
 
+	// < add repeated type with count
+	genTypeMsgsListWithCount := &descriptorpb.DescriptorProto{
+		Name: strptr(fmt.Sprintf("%sWithCount",genTypeMsg.GetName())),
+		Field: []*descriptorpb.FieldDescriptorProto{
+			BuildPBDataCountOptionalField(),
+			BuildPBSchemaListField(genType),
+		},
+	}
+	err = adaptor.AddMessageDescriptorNoExtractDep(
+		pkgName,
+		genTypeMsgsListWithCount,
+	)
+	if err != nil {
+		log.Println(err)
+		return out, err
+	}
+	// >
+
 	for _, m := range this.Methods {
-		resources, err := m.genMethodProtos(pkgName, msgContainer, genTypeMsgsList)
+		resources, err := m.genMethodProtos(pkgName, msgContainer, genTypeMsgsList,genTypeMsgsListWithCount)
 		if err != nil {
 			return serviceResources{}, err
 		}
