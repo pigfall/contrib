@@ -152,6 +152,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				TypeName: strptr(genTypeMsg.GetName()),
 				Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
 				Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
+				JsonName: strptr("data_list"),
 			},
 		},
 	}
@@ -167,7 +168,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 
 	// < add repeated type with count
 	genTypeMsgsListWithCount := &descriptorpb.DescriptorProto{
-		Name: strptr(fmt.Sprintf("%sWithCount",genTypeMsg.GetName())),
+		Name: strptr(fmt.Sprintf("%sWithCount", genTypeMsg.GetName())),
 		Field: []*descriptorpb.FieldDescriptorProto{
 			BuildPBDataCountOptionalField(),
 			BuildPBSchemaListField(genType),
@@ -184,7 +185,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 	// >
 
 	for _, m := range this.Methods {
-		resources, err := m.genMethodProtos(pkgName, msgContainer, genTypeMsgsList,genTypeMsgsListWithCount)
+		resources, err := m.genMethodProtos(pkgName, msgContainer, genTypeMsgsList, genTypeMsgsListWithCount)
 		if err != nil {
 			return serviceResources{}, err
 		}
