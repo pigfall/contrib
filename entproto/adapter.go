@@ -182,6 +182,13 @@ func (a *Adapter) parse() error {
 		}
 
 		fd := a.protoPackages[protoPkg]
+		// { set swagger api base path
+		swaggerApiPath, ok := os.LookupEnv("SWAGGER_API_PATH")
+		if ok {
+			proto.SetExtension(fd.Options, options.E_Openapiv2Swagger, &options.Swagger{BasePath: swaggerApiPath})
+		}
+
+		// }
 
 		a.schemaProtoFiles[genType.Name] = *fd.Name
 
