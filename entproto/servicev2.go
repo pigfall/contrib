@@ -129,7 +129,7 @@ func extractServiceV2Annotation(sch *gen.Type) (*servicev2, error) {
 	return &out, nil
 }
 
-func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, msgContainer *MsgContainer) (serviceResources, error) {
+func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, msgContainer *MsgContainer,schemaPBMsgs map[string]*descriptorpb.DescriptorProto) (serviceResources, error) {
 	genType := msgContainer.genType
 	genTypeMsg := msgContainer.genTypePBMsg
 	name := genType.Name
@@ -257,7 +257,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 				)
 			}
 
-			mGet, err := edgeMethodGet(adaptor, pkgName, genType, msgContainer, edge)
+			mGet, err := edgeMethodGet(adaptor, pkgName, genType, msgContainer, edge,schemaPBMsgs)
 			if err != nil {
 				log.Println(err)
 				return out, err
@@ -326,7 +326,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 
 			}
 
-			mGet, err := edgeMethodGet(adaptor, pkgName, genType, msgContainer, edge)
+			mGet, err := edgeMethodGet(adaptor, pkgName, genType, msgContainer, edge,schemaPBMsgs)
 			if err != nil {
 				log.Println(err)
 				return out, err
@@ -421,7 +421,7 @@ func edgeMethodGetUrl(node *gen.Type, edge *gen.Edge) (string, error) {
 	return sb.String(), nil
 }
 
-func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer *MsgContainer, edge *gen.Edge) (*descriptorpb.MethodDescriptorProto, error) {
+func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer *MsgContainer, edge *gen.Edge,schemaPBMsgs map[string]*descriptorpb.DescriptorProto) (*descriptorpb.MethodDescriptorProto, error) {
 	url, err := edgeMethodGetUrl(genType, edge)
 	if err != nil {
 		log.Println(err)
@@ -430,13 +430,31 @@ func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer 
 	var schemaName = genType.Name
 	var edgeSchemaName = edge.Type.Name
 	edgeGetInputTypeName := fmt.Sprintf("%sFind%ssReq", schemaName, edgeSchemaName)
+	edgePBMsg := schemaPBMsgs[edgeSchemaName]
+	fields := make([]*descriptorpb.FieldDescriptorProto,0,len(edgePBMsg.Field))
+	var schemaPBIdFieldName =  *BuildPBSchemaIdField(genType).Name
+	for _,field := range edgePBMsg.Field{
+		if *field.Name == schemaPBIdFieldName {
+			continue
+		}
+		if field.Type == nil{
+			fields = append(fields,field)
+			continue
+		}
+		if *field.Type != descriptorpb.FieldDescriptorProto_TYPE_ENUM{
+			fields = append(fields,field)
+		}
+	}
+	fields = append(fields,BuildPBPageIndexField(),BuildPBPageSizeField())
+	fields = append(fields,BuildPBSchemaIdField(genType))
 	edgeGetInputType := &descriptorpb.DescriptorProto{
 		Name: strptr(edgeGetInputTypeName),
-		Field: []*descriptorpb.FieldDescriptorProto{
-			BuildPBPageIndexField(),
-			BuildPBPageSizeField(),
-			BuildPBSchemaIdField(genType),
-		},
+		Field:fields,
+		//Field: []*descriptorpb.FieldDescriptorProto{
+		//	BuildPBPageIndexField(),
+		//	BuildPBPageSizeField(),
+		//	BuildPBSchemaIdField(genType),
+		//},
 	}
 	err = ad.AddMessageDescriptorNoExtractDep(
 		pkgName,

@@ -159,8 +159,10 @@ func (a *Adapter) parse() error {
 
 	msgContaienrs := make([]*MsgContainer, 0)
 
+	var schemaPBMsgs =make(map[string]*descriptorpb.DescriptorProto)
 	for _, genType := range a.graph.Nodes {
 		messageDescriptor, err := a.toProtoMessageDescriptor(genType)
+		schemaPBMsgs[genType.Name] = messageDescriptor
 
 		// store specific message parse failures
 		if err != nil {
@@ -301,6 +303,7 @@ func (a *Adapter) parse() error {
 			a,
 			protoPkg,
 			msgContainer,
+			schemaPBMsgs,
 		)
 		if err != nil {
 			log.Println(err)
