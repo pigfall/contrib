@@ -246,7 +246,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 					out.svc.Method,
 					mAddById,
 				)
-				mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
+				mRemove, err := edgeMethodRemove(adaptor,pkgName,genType, edge,schemaPBMsgs[edge.Type.Name])
 				if err != nil {
 					log.Println(err)
 					return out, err
@@ -313,7 +313,7 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 					mAddById,
 				)
 
-				mRemove, err := edgeMethodRemove(genType, edge, twoTypeIdStructName)
+				mRemove, err := edgeMethodRemove(adaptor,pkgName,genType, edge,schemaPBMsgs[edge.Type.Name])
 				if err != nil {
 					log.Println(err)
 					return out, err
@@ -421,18 +421,9 @@ func edgeMethodGetUrl(node *gen.Type, edge *gen.Edge) (string, error) {
 	return sb.String(), nil
 }
 
-func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer *MsgContainer, edge *gen.Edge,schemaPBMsgs map[string]*descriptorpb.DescriptorProto) (*descriptorpb.MethodDescriptorProto, error) {
-	url, err := edgeMethodGetUrl(genType, edge)
-	if err != nil {
-		log.Println(err)
-		return nil, err
-	}
-	var schemaName = genType.Name
-	var edgeSchemaName = edge.Type.Name
-	edgeGetInputTypeName := fmt.Sprintf("%sFind%ssReq", schemaName, edgeSchemaName)
-	edgePBMsg := schemaPBMsgs[edgeSchemaName]
+func buildFieldsForSchemaIdWithEdgePB(schema *gen.Type,edgePBMsg *descriptorpb.DescriptorProto)[]*descriptorpb.FieldDescriptorProto{
 	fields := make([]*descriptorpb.FieldDescriptorProto,0,len(edgePBMsg.Field))
-	var schemaPBIdFieldName =  *BuildPBSchemaIdField(genType).Name
+	var schemaPBIdFieldName =  *BuildPBSchemaIdField(schema).Name
 	for _,field := range edgePBMsg.Field{
 		if *field.Name == schemaPBIdFieldName {
 			continue
@@ -446,7 +437,37 @@ func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer 
 		}
 	}
 	fields = append(fields,BuildPBPageIndexField(),BuildPBPageSizeField())
-	fields = append(fields,BuildPBSchemaIdField(genType))
+	fields = append(fields,BuildPBSchemaIdField(schema))
+	return fields
+}
+
+func edgeMethodGet(ad *Adapter, pkgName string, genType *gen.Type, msgContainer *MsgContainer, edge *gen.Edge,schemaPBMsgs map[string]*descriptorpb.DescriptorProto) (*descriptorpb.MethodDescriptorProto, error) {
+	url, err := edgeMethodGetUrl(genType, edge)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	var schemaName = genType.Name
+	var edgeSchemaName = edge.Type.Name
+	edgeGetInputTypeName := fmt.Sprintf("%sFind%ssReq", schemaName, edgeSchemaName)
+	edgePBMsg := schemaPBMsgs[edgeSchemaName]
+	//fields := make([]*descriptorpb.FieldDescriptorProto,0,len(edgePBMsg.Field))
+	//var schemaPBIdFieldName =  *BuildPBSchemaIdField(genType).Name
+	//for _,field := range edgePBMsg.Field{
+	//	if *field.Name == schemaPBIdFieldName {
+	//		continue
+	//	}
+	//	if field.Type == nil{
+	//		fields = append(fields,field)
+	//		continue
+	//	}
+	//	if *field.Type != descriptorpb.FieldDescriptorProto_TYPE_ENUM{
+	//		fields = append(fields,field)
+	//	}
+	//}
+	//fields = append(fields,BuildPBPageIndexField(),BuildPBPageSizeField())
+	//fields = append(fields,BuildPBSchemaIdField(genType))
+	fields := buildFieldsForSchemaIdWithEdgePB(genType,edgePBMsg)
 	edgeGetInputType := &descriptorpb.DescriptorProto{
 		Name: strptr(edgeGetInputTypeName),
 		Field:fields,
@@ -570,14 +591,34 @@ func edgeMethodAddById(genType *gen.Type, edge *gen.Edge, twoTypeIdStructName st
 	return methodEdgeAddById, nil
 }
 
-func edgeMethodRemove(genType *gen.Type, edge *gen.Edge, twoTypeIdStructName string) (*descriptorpb.MethodDescriptorProto, error) {
+func edgeMethodRemove(ad *Adapter,pkgName string,genType *gen.Type, edge *gen.Edge, edgePBMsg *descriptorpb.DescriptorProto) (*descriptorpb.MethodDescriptorProto, error) {
 	url, err := nodeIdAndEdgeIdUrlTpl(genType, edge)
 	if err != nil {
 		return nil, err
 	}
+	url = strings.TrimSuffix(url,fmt.Sprintf("/{%s}",edge.Type.ID.StorageKey()))
+
+	fields := buildFieldsForSchemaIdWithEdgePB(genType,edgePBMsg)
+	edgeRemoveInputType := &descriptorpb.DescriptorProto{
+		Name: strptr(fmt.Sprintf("%sRemove%sReq",genType.Name,edge.Type.Name)),
+		Field:fields,
+		//Field: []*descriptorpb.FieldDescriptorProto{
+		//	BuildPBPageIndexField(),
+		//	BuildPBPageSizeField(),
+		//	BuildPBSchemaIdField(genType),
+		//},
+	}
+	err = ad.AddMessageDescriptorNoExtractDep(
+		pkgName,
+		edgeRemoveInputType,
+	)
+	if err != nil{
+		log.Println(err)
+		return nil,err
+	}
 	methodEdgeRemove := &descriptorpb.MethodDescriptorProto{
 		Name:       strptr(fmt.Sprintf("Remove%s", edge.Type.Name)),
-		InputType:  strptr(twoTypeIdStructName),
+		InputType:  strptr(*edgeRemoveInputType.Name),
 		OutputType: strptr("google.protobuf.Empty"),
 		Options:    &descriptorpb.MethodOptions{},
 	}
