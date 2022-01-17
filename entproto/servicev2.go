@@ -147,12 +147,12 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 		EnumType: []*descriptorpb.EnumDescriptorProto(nil),
 		Field: []*descriptorpb.FieldDescriptorProto{
 			{
-				Name:     strptr( BuildRepeatedPBMsgFieldName(genType)),
+				Name:     strptr(FirstWorldLower(BuildRepeatedPBMsgFieldName(genType)) ),
 				Number:   int32ptr(1),
 				TypeName: strptr(genTypeMsg.GetName()),
 				Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
 				Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
-				JsonName: strptr( BuildRepeatedPBMsgFieldName(genType)),
+				JsonName: strptr(FirstWorldLower((BuildRepeatedPBMsgFieldName(genType)))),
 			},
 		},
 	}

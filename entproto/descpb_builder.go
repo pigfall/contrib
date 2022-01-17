@@ -86,3 +86,10 @@ func BuildPBSchemaListField(schema *gen.Type) *descriptorpb.FieldDescriptorProto
 func BuildRepeatedPBMsgFieldName(schema *gen.Type)string{
 	return fmt.Sprintf("%ss",schema.Name)
 }
+
+func FirstWorldLower(name string)string{
+	f := strings.ToLower(string(name[0]))
+	nameBytes := []byte(name)
+	nameBytes[0] = ([]byte(f))[0]
+	return string(nameBytes)
+}
