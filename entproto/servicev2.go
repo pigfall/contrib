@@ -206,9 +206,12 @@ func (this servicev2) createServiceResources(adaptor *Adapter, pkgName string, m
 					JsonName: strptr(BuildSchemaIdStructName(genType)),
 				},
 				{
+					// Name:     strptr(fmt.Sprintf("%ss",BuildSchemaIdStructName(edge.Type))),
 					Name:     strptr(BuildSchemaIdStructName(edge.Type)),
 					Type:     descriptorpb.FieldDescriptorProto_TYPE_STRING.Enum(),
-					JsonName: strptr(BuildSchemaIdStructName(edge.Type)),
+					Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
+					// JsonName: strptr(fmt.Sprintf("%ss",BuildSchemaIdStructName(edge.Type))),
+					 JsonName: strptr(BuildSchemaIdStructName(edge.Type)),
 				},
 			},
 		}
@@ -569,8 +572,8 @@ func edgeMethodAddById(genType *gen.Type, edge *gen.Edge, twoTypeIdStructName st
 	}
 
 	httpRule := &pbHttpOpt.HttpRule{
-		Pattern: &pbHttpOpt.HttpRule_Post{
-			Post: url,
+		Pattern: &pbHttpOpt.HttpRule_Patch{
+			Patch: url,
 		},
 	}
 

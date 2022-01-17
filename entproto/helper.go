@@ -33,6 +33,10 @@ func FindSchemaByNameX(nodes []*gen.Type, name string) *gen.Type {
 	panic(fmt.Errorf("Not find schema %s", name))
 }
 
+func BuildSchemaIdsStructName(node *gen.Type) string {
+	return fmt.Sprintf("%ss",node.ID.StorageKey())
+}
+
 func BuildSchemaIdStructName(node *gen.Type) string {
 	return node.ID.StorageKey()
 }
