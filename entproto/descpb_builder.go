@@ -2,6 +2,7 @@ package entproto
 
 import (
 	"fmt"
+	"strings"
 
 	"entgo.io/ent/entc/gen"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -10,7 +11,7 @@ import (
 // build pb field page index
 // page_index
 func BuildPBPageIndexField() *descriptorpb.FieldDescriptorProto {
-	name := strptr("page_index")
+	name := strptr("page")
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     name,
 		Type:     descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
@@ -20,7 +21,7 @@ func BuildPBPageIndexField() *descriptorpb.FieldDescriptorProto {
 
 // page_size
 func BuildPBPageSizeField() *descriptorpb.FieldDescriptorProto {
-	name := strptr("page_size")
+	name := strptr("per_page")
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     name,
 		Type:     descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
@@ -51,7 +52,7 @@ func BuildPBSchemaIdField(node *gen.Type) *descriptorpb.FieldDescriptorProto {
 
 // data_count
 func BuildPBDataCountField() *descriptorpb.FieldDescriptorProto {
-	name := strptr("data_count")
+	name := strptr("total")
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     name,
 		Type:     descriptorpb.FieldDescriptorProto_TYPE_INT32.Enum(),
@@ -61,7 +62,7 @@ func BuildPBDataCountField() *descriptorpb.FieldDescriptorProto {
 
 // data_count optional
 func BuildPBDataCountOptionalField() *descriptorpb.FieldDescriptorProto {
-	name := strptr("data_count")
+	name := strptr("total")
 	return &descriptorpb.FieldDescriptorProto{
 		Name:     name,
 		TypeName:     strptr("google.protobuf.Int32Value"),
@@ -72,12 +73,16 @@ func BuildPBDataCountOptionalField() *descriptorpb.FieldDescriptorProto {
 
 // repeated {schame}s
 func BuildPBSchemaListField(schema *gen.Type) *descriptorpb.FieldDescriptorProto {
-	name := strptr(fmt.Sprintf("%ss", schema.Name))
+	name := strptr(fmt.Sprintf("%ss", strings.ToLower(schema.Name)))
 	return &descriptorpb.FieldDescriptorProto{
-		Name:     name,
+		Name:     strptr(fmt.Sprintf("%ss",schema.Name)),
 		Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
 		TypeName: strptr(schema.Name),
 		Label:    descriptorpb.FieldDescriptorProto_LABEL_REPEATED.Enum(),
 		JsonName: name,
 	}
+}
+
+func BuildRepeatedPBMsgFieldName(schema *gen.Type)string{
+	return fmt.Sprintf("%ss",schema.Name)
 }
