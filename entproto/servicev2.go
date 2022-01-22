@@ -384,7 +384,8 @@ func edgeAddUrlTpl(node *gen.Type, edge *gen.Edge) (string, error) {
 }
 
 func nodeIdAndEdgeIdUrlTpl(node *gen.Type, edge *gen.Edge) (string, error) {
-	tplIns, err := tpl.New("").Parse("/{{.nodeName}}s/{ {{- .nodeIdStorageKey -}} }/{{.edgeTypeName}}s/{ {{- .edgeTypeIdStorageKey -}} }")
+	// tplIns, err := tpl.New("").Parse("/{{.nodeName}}s/{ {{- .nodeIdStorageKey -}} }/{{.edgeTypeName}}s/{ {{- .edgeTypeIdStorageKey -}} }")
+	 tplIns, err := tpl.New("").Parse("/{{.nodeName}}s/{ {{- .nodeIdStorageKey -}} }/{{.edgeTypeName}}s")
 	if err != nil {
 		log.Println(err)
 		return "", err
